@@ -2,6 +2,18 @@
 name = "azari-cli"
 version = "0.1.0"
 edition = "2024"
+description = "Declarative linux builder. Build your own linux image with ease."
+
+[lib]
+name = "azari_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "azari"
+path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4.5.60", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde-saphyr = "0.0.21"
+thiserror = "2.0.18"
