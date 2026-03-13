@@ -2,7 +2,7 @@ use std::path::Path;
 
 use serde::Deserialize;
 
-use crate::receipt::{error::ReceiptError, field::ReceiptField, source::SourcePathGuard};
+use crate::receipt::{error::ReceiptError, field::ReceiptField, path::SourcePathGuard};
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
@@ -16,7 +16,7 @@ impl Receipt {
     /// Parses a receipt from a YAML file.
     pub fn from_file(path: &Path) -> Result<Self, ReceiptError> {
         let file = std::fs::File::open(path)?;
-        let _guard = SourcePathGuard::set_path(path.to_path_buf());
+        let _guard = SourcePathGuard::push_path(path.to_path_buf());
         Ok(serde_saphyr::from_reader(file)?)
     }
 }

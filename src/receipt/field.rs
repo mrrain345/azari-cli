@@ -6,7 +6,7 @@ use serde::{
 };
 
 use crate::receipt::error::ReceiptError;
-use crate::receipt::source::current_source;
+use crate::receipt::path::current_path;
 
 /// A single optional field in a receipt file.
 ///
@@ -24,21 +24,7 @@ impl<T> ReceiptField<T> {
             sources: vec![(path, value)],
         }
     }
-}
 
-impl<T> Default for ReceiptField<T> {
-    /// Returns an empty field with no value from any source.
-    ///
-    /// Implemented manually so that no `T: Default` bound is required —
-    /// `Vec<_>` is always default-constructable regardless of its element type.
-    fn default() -> Self {
-        Self {
-            sources: Vec::new(),
-        }
-    }
-}
-
-impl<T> ReceiptField<T> {
     /// Returns the value of the field, if present.
     ///
     /// Returns `ReceiptError::FieldConflict` if the field has been defined in
@@ -57,6 +43,14 @@ impl<T> ReceiptField<T> {
     }
 }
 
+impl<T> Default for ReceiptField<T> {
+    fn default() -> Self {
+        Self {
+            sources: Vec::new(),
+        }
+    }
+}
+
 impl<'de, T> Deserialize<'de> for ReceiptField<T>
 where
     T: Deserialize<'de>,
@@ -66,7 +60,7 @@ where
         D: Deserializer<'de>,
     {
         let opt = Option::<T>::deserialize(deserializer)?;
-        let path = current_source().expect("Current source path is not set");
+        let path = current_path().expect("Current source path is not set");
 
         Ok(match opt {
             Some(value) => ReceiptField::new(path, value),
@@ -95,7 +89,7 @@ mod tests {
 
     use super::ReceiptField;
     use crate::receipt::error::ReceiptError;
-    use crate::receipt::source::SourcePathGuard;
+    use crate::receipt::path::SourcePathGuard;
 
     // Test value()
 
@@ -133,7 +127,7 @@ mod tests {
     #[test]
     fn deserialize_with_context() {
         let path = PathBuf::from("receipt.yaml");
-        let _guard = SourcePathGuard::set_path(path.clone());
+        let _guard = SourcePathGuard::push_path(path.clone());
         let field: ReceiptField<String> = serde_saphyr::from_str("hello").unwrap();
         assert_eq!(field.value().unwrap().map(String::as_str), Some("hello"));
         assert_eq!(field.sources[0].0, path);
