@@ -5,33 +5,51 @@ use serde::{
     ser::{Serialize, Serializer},
 };
 
+use crate::receipt::error::ReceiptError;
+use crate::receipt::field::ReceiptField;
 use crate::receipt::path::current_path;
 
 /// A list field in a receipt file.
 ///
-/// Semantically represents `Vec<T>`: items from every source
-/// are merged into a single flat list in source order.
+/// Items from every source are merged into a single flat list in source order.
+/// Multiple sources defining this field is not a conflict.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReceiptList<T = String> {
-    sources: Vec<(PathBuf, Vec<T>)>,
+    sources: Vec<PathBuf>,
+    values: Vec<Vec<T>>,
 }
 
 impl<T> ReceiptList<T> {
-    /// Creates a list field with values from a known source path.
+    /// Creates a list field from a known source path.
     pub fn new(path: PathBuf, values: Vec<T>) -> Self {
         Self {
-            sources: vec![(path, values)],
+            sources: vec![path],
+            values: vec![values],
         }
     }
+}
+
+impl<T> ReceiptField for ReceiptList<T> {
+    type Value<'a>
+        = Vec<&'a T>
+    where
+        T: 'a;
 
     /// Returns the merged list of values across all sources.
-    pub fn value(&self) -> Vec<&T> {
-        self.sources.iter().flat_map(|(_, v)| v.iter()).collect()
+    fn value(&self) -> Result<Vec<&T>, ReceiptError> {
+        Ok(self.values.iter().flat_map(|v| v.iter()).collect())
     }
 
-    /// Returns all `(path, values)` pairs that contributed to this list.
-    pub fn sources(&self) -> &[(PathBuf, Vec<T>)] {
+    fn sources(&self) -> &[PathBuf] {
         &self.sources
+    }
+
+    fn merge(self, other: Self) -> Self {
+        let mut sources = self.sources;
+        let mut values = self.values;
+        sources.extend(other.sources);
+        values.extend(other.values);
+        Self { sources, values }
     }
 }
 
@@ -39,6 +57,7 @@ impl<T> Default for ReceiptList<T> {
     fn default() -> Self {
         Self {
             sources: Vec::new(),
+            values: Vec::new(),
         }
     }
 }
@@ -69,7 +88,9 @@ where
     where
         S: Serializer,
     {
-        self.value().serialize(serializer)
+        self.value()
+            .map_err(serde::ser::Error::custom)?
+            .serialize(serializer)
     }
 }
 
@@ -78,6 +99,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::ReceiptList;
+    use crate::receipt::field::ReceiptField;
     use crate::receipt::path::SourcePathGuard;
 
     // Test value()
@@ -85,7 +107,7 @@ mod tests {
     #[test]
     fn default_list_is_empty() {
         let list: ReceiptList = ReceiptList::default();
-        assert!(list.value().is_empty());
+        assert!(list.value().unwrap().is_empty());
     }
 
     #[test]
@@ -94,7 +116,7 @@ mod tests {
             "receipt.yaml".into(),
             vec!["foo".to_string(), "bar".to_string()],
         );
-        let value = list.value();
+        let value = list.value().unwrap();
         assert_eq!(value[0], "foo");
         assert_eq!(value[1], "bar");
         assert_eq!(value.len(), 2);
@@ -103,18 +125,19 @@ mod tests {
     #[test]
     fn list_with_empty_vec_is_empty() {
         let list = ReceiptList::<String>::new("receipt.yaml".into(), vec![]);
-        assert!(list.value().is_empty());
+        assert!(list.value().unwrap().is_empty());
     }
 
     #[test]
     fn multiple_sources_merges_values() {
         let list: ReceiptList<String> = ReceiptList {
-            sources: vec![
-                ("a.yaml".into(), vec!["foo".to_string()]),
-                ("b.yaml".into(), vec!["bar".to_string(), "baz".to_string()]),
+            sources: vec!["a.yaml".into(), "b.yaml".into()],
+            values: vec![
+                vec!["foo".to_string()],
+                vec!["bar".to_string(), "baz".to_string()],
             ],
         };
-        let value = list.value();
+        let value = list.value().unwrap();
         assert_eq!(value.len(), 3);
         assert_eq!(value[0], "foo");
         assert_eq!(value[1], "bar");
@@ -124,9 +147,53 @@ mod tests {
     #[test]
     fn multiple_sources_all_empty_is_empty() {
         let list: ReceiptList<String> = ReceiptList {
-            sources: vec![("a.yaml".into(), vec![]), ("b.yaml".into(), vec![])],
+            sources: vec!["a.yaml".into(), "b.yaml".into()],
+            values: vec![vec![], vec![]],
         };
-        assert!(list.value().is_empty());
+        assert!(list.value().unwrap().is_empty());
+    }
+
+    // Test merge()
+
+    #[test]
+    fn merge_two_empty_lists() {
+        let a: ReceiptList<String> = ReceiptList::default();
+        let b: ReceiptList<String> = ReceiptList::default();
+        let merged = a.merge(b);
+        assert!(merged.value().unwrap().is_empty());
+    }
+
+    #[test]
+    fn merge_empty_with_values() {
+        let a: ReceiptList<String> = ReceiptList::default();
+        let b = ReceiptList::new("b.yaml".into(), vec!["foo".to_string(), "bar".to_string()]);
+        let merged = a.merge(b);
+        let value = merged.value().unwrap();
+        assert_eq!(value.len(), 2);
+        assert_eq!(value[0], "foo");
+        assert_eq!(value[1], "bar");
+    }
+
+    #[test]
+    fn merge_combines_values_in_order() {
+        let a = ReceiptList::new("a.yaml".into(), vec!["foo".to_string()]);
+        let b = ReceiptList::new("b.yaml".into(), vec!["bar".to_string(), "baz".to_string()]);
+        let merged = a.merge(b);
+        let value = merged.value().unwrap();
+        assert_eq!(value.len(), 3);
+        assert_eq!(value[0], "foo");
+        assert_eq!(value[1], "bar");
+        assert_eq!(value[2], "baz");
+    }
+
+    #[test]
+    fn merge_preserves_source_order() {
+        let a = ReceiptList::new("a.yaml".into(), vec!["foo".to_string()]);
+        let b = ReceiptList::new("b.yaml".into(), vec!["bar".to_string()]);
+        let merged = a.merge(b);
+        let sources = merged.sources();
+        assert_eq!(sources[0], PathBuf::from("a.yaml"));
+        assert_eq!(sources[1], PathBuf::from("b.yaml"));
     }
 
     // Test Deserialize
@@ -142,10 +209,10 @@ mod tests {
         let path = PathBuf::from("receipt.yaml");
         let _guard = SourcePathGuard::push_path(path.clone());
         let list: ReceiptList<String> = serde_saphyr::from_str("- foo\n- bar\n").unwrap();
-        let value = list.value();
+        let value = list.value().unwrap();
         assert_eq!(value[0], "foo");
         assert_eq!(value[1], "bar");
-        assert_eq!(list.sources[0].0, path);
+        assert_eq!(list.sources()[0], path);
     }
 
     #[test]
@@ -153,6 +220,6 @@ mod tests {
         let path = PathBuf::from("receipt.yaml");
         let _guard = SourcePathGuard::push_path(path.clone());
         let list: ReceiptList<String> = serde_saphyr::from_str("~").unwrap();
-        assert!(list.value().is_empty());
+        assert!(list.value().unwrap().is_empty());
     }
 }

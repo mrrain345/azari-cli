@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use azari_cli::receipt::Receipt;
+use azari_cli::receipt::ReceiptField;
 
 fn receipts_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/receipts")
@@ -67,30 +68,26 @@ fn full_receipt_source_paths_are_set() {
     let path = receipts_dir().join("fields-full.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
 
-    // Each present field should record the canonical path.
     let expected_path = path.canonicalize().ok();
 
     let from_path = receipt
         .from
         .sources()
         .first()
-        .map(|(p, _)| p.canonicalize().ok());
-
+        .map(|p| p.canonicalize().ok());
     assert_eq!(from_path, Some(expected_path.clone()));
 
     let name_path = receipt
         .name
         .sources()
         .first()
-        .map(|(p, _)| p.canonicalize().ok());
-
+        .map(|p| p.canonicalize().ok());
     assert_eq!(name_path, Some(expected_path.clone()));
 
     let hostname_path = receipt
         .hostname
         .sources()
         .first()
-        .map(|(p, _)| p.canonicalize().ok());
-
+        .map(|p| p.canonicalize().ok());
     assert_eq!(hostname_path, Some(expected_path));
 }

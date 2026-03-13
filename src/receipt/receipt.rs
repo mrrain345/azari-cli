@@ -2,14 +2,16 @@ use std::path::Path;
 
 use serde::Deserialize;
 
-use crate::receipt::{error::ReceiptError, field::ReceiptField, path::SourcePathGuard};
+use crate::receipt::{ReceiptError, ReceiptList, ReceiptUnique, path::SourcePathGuard};
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct Receipt {
-    pub from: ReceiptField,
-    pub name: ReceiptField,
-    pub hostname: ReceiptField,
+    pub from: ReceiptUnique,
+    pub name: ReceiptUnique,
+    pub hostname: ReceiptUnique,
+
+    pub packages: ReceiptList,
 }
 
 impl Receipt {
