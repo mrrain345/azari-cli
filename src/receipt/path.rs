@@ -5,7 +5,7 @@ use std::path::PathBuf;
 thread_local! {
     /// Stack of source file paths for receipts being deserialized on this thread.
     /// The most recently pushed path is at the end of the vector.
-    static PATH_STACK: RefCell<Vec<PathBuf>> = RefCell::new(Vec::new());
+    static PATH_STACK: RefCell<Vec<PathBuf>> = const { RefCell::new(Vec::new()) };
 }
 
 /// Returns a clone of the currently active source path.

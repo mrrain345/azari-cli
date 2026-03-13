@@ -1,6 +1,6 @@
 use clap::Args;
 
-use crate::receipt::{error::ReceiptError, receipt::Receipt};
+use crate::receipt::{Receipt, ReceiptError};
 
 use super::Cli;
 

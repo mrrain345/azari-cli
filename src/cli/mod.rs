@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::receipt::error::ReceiptError;
+use crate::receipt::ReceiptError;
 
 pub mod build;
 
