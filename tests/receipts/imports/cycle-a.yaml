@@ -1,0 +1,7 @@
+import:
+  - cycle-b.yaml
+
+from: "cycle-a-image"
+name: "Cycle A"
+packages:
+  - cycle-a-pkg

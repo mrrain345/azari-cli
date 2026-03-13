@@ -1,0 +1,11 @@
+import:
+  - dup-mid.yaml
+  - base.yaml
+  - dup-mid.yaml
+
+from: dup-root-image
+name: Dup Root
+hostname: dup-root-host
+
+packages:
+  - dup-root-pkg

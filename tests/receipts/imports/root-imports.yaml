@@ -1,0 +1,10 @@
+import:
+  - base.yaml
+  - extras.yaml
+
+from: "root-image:latest"
+name: "Root Name"
+hostname: "root-host"
+
+packages:
+  - root-pkg
