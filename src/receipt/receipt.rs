@@ -8,7 +8,7 @@ use crate::receipt::{
 };
 
 #[derive(Debug, Default, Deserialize)]
-#[serde(default)]
+#[serde(default, rename_all = "kebab-case")]
 pub struct Receipt {
     pub import: ReceiptImport,
 
@@ -45,7 +45,7 @@ impl Receipt {
 
     fn parse_single(path: &Path) -> Result<Self, ReceiptError> {
         let file = std::fs::File::open(path)?;
-        let _guard = SourcePathGuard::push_path(path.to_path_buf());
+        let _guard = SourcePathGuard::push_path(path.into());
         Ok(serde_saphyr::from_reader(file)?)
     }
 

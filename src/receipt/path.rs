@@ -30,7 +30,7 @@ pub(crate) struct SourcePathGuard {
     depth: usize,
     /// A phantom type that makes this struct non-Send and non-Sync.
     ///
-    /// **NOTE:** Can be replaced with `impl !Send + !Sync for SourcePathGuard {}` in the future.
+    /// **NOTE:** Can be replaced with `impl !Send` and `impl !Sync` in the future.
     /// Negative trait bounds are not yet available in stable Rust.
     _phantom: PhantomData<*const ()>,
 }

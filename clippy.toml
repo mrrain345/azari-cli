@@ -1,1 +1,3 @@
+# NOTE: `allow-private-module-inception` doesn't currently work due to:
+# https://github.com/rust-lang/rust-clippy/issues/13259
 allow-private-module-inception = true
