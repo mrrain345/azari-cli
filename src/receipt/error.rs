@@ -16,4 +16,7 @@ pub enum ReceiptError {
 
     #[error("Failed to parse receipt file: {0}")]
     Parse(#[from] serde_saphyr::Error),
+
+    #[error("Unsupported distro: {0}")]
+    UnsupportedDistro(String),
 }

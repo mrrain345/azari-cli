@@ -1,0 +1,25 @@
+use crate::distro::DistroOps;
+
+pub struct Arch;
+
+impl DistroOps for Arch {
+    fn distro(&self) -> &'static str {
+        "arch"
+    }
+
+    fn default_image(&self) -> &'static str {
+        "ghcr.io/bootcrew/arch-bootc:latest"
+    }
+
+    fn set_hostname(&self, hostname: &str) -> Option<String> {
+        Some(format!("RUN echo '{}' > /etc/hostname", hostname))
+    }
+
+    fn install_packages(&self, packages: &[&str]) -> Option<String> {
+        if packages.is_empty() {
+            return None;
+        }
+
+        Some(format!("RUN pacman -S --noconfirm {}", packages.join(" ")))
+    }
+}
