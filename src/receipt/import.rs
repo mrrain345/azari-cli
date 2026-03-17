@@ -55,14 +55,11 @@ impl ReceiptImport {
 }
 
 impl ReceiptField for ReceiptImport {
-    type Value<'a>
-        = &'a [PathBuf]
-    where
-        Self: 'a;
+    type Value = Vec<PathBuf>;
 
     /// Pending imports (empty when full load completes).
-    fn value(&self) -> Result<Self::Value<'_>, ReceiptError> {
-        Ok(&self.pending)
+    fn value(self) -> Result<Self::Value, ReceiptError> {
+        Ok(self.pending)
     }
 
     /// Loaded imported module paths.

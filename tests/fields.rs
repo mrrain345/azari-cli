@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
-use azari_cli::receipt::Receipt;
-use azari_cli::receipt::ReceiptField;
+use azari_cli::receipt::{Receipt, ReceiptField};
 
 fn receipts_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/receipts")
@@ -13,17 +12,11 @@ fn load_fields_receipt() {
     let receipt = Receipt::from_file(&path).unwrap();
 
     assert_eq!(
-        receipt.from.value().unwrap().map(String::as_str),
+        receipt.from.value().unwrap().as_deref(),
         Some("arch-bootc:latest")
     );
-    assert_eq!(
-        receipt.name.value().unwrap().map(String::as_str),
-        Some("Azari OS")
-    );
-    assert_eq!(
-        receipt.hostname.value().unwrap().map(String::as_str),
-        Some("azari")
-    );
+    assert_eq!(receipt.name.value().unwrap().as_deref(), Some("Azari OS"));
+    assert_eq!(receipt.hostname.value().unwrap().as_deref(), Some("azari"));
 }
 
 #[test]
@@ -32,10 +25,7 @@ fn load_partial_receipt() {
     let receipt = Receipt::from_file(&path).unwrap();
 
     assert_eq!(receipt.from.value().unwrap(), None);
-    assert_eq!(
-        receipt.name.value().unwrap().map(String::as_str),
-        Some("Azari OS")
-    );
+    assert_eq!(receipt.name.value().unwrap().as_deref(), Some("Azari OS"));
     assert_eq!(receipt.hostname.value().unwrap(), None);
 }
 

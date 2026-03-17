@@ -1,5 +1,6 @@
 mod error;
 mod field;
+pub mod fields;
 mod import;
 mod list;
 #[allow(clippy::module_inception)]

@@ -12,29 +12,20 @@ fn import_merges_fields_and_lists() {
     let receipt = Receipt::from_file(&path).unwrap();
 
     assert_eq!(
-        receipt.from.value().unwrap().map(String::as_str),
+        receipt.from.value().unwrap().as_deref(),
         Some("root-image:latest")
     );
+    assert_eq!(receipt.name.value().unwrap().as_deref(), Some("Root Name"));
     assert_eq!(
-        receipt.name.value().unwrap().map(String::as_str),
-        Some("Root Name")
-    );
-    assert_eq!(
-        receipt.hostname.value().unwrap().map(String::as_str),
+        receipt.hostname.value().unwrap().as_deref(),
         Some("root-host")
     );
 
-    let packages: Vec<&str> = receipt
-        .packages
-        .value()
-        .unwrap()
-        .into_iter()
-        .map(String::as_str)
-        .collect();
+    let packages: Vec<String> = receipt.packages.value().unwrap();
 
     assert_eq!(
         packages,
-        vec!["base-pkg-1", "base-pkg-2", "extra-pkg", "root-pkg"]
+        &["base-pkg-1", "base-pkg-2", "extra-pkg", "root-pkg"]
     );
 }
 
@@ -44,21 +35,12 @@ fn duplicate_import_is_ignored() {
     let receipt = Receipt::from_file(&path).unwrap();
 
     assert_eq!(
-        receipt.from.value().unwrap().map(String::as_str),
+        receipt.from.value().unwrap().as_deref(),
         Some("dup-root-image")
     );
-    assert_eq!(
-        receipt.name.value().unwrap().map(String::as_str),
-        Some("Dup Root")
-    );
+    assert_eq!(receipt.name.value().unwrap().as_deref(), Some("Dup Root"));
 
-    let packages: Vec<&str> = receipt
-        .packages
-        .value()
-        .unwrap()
-        .into_iter()
-        .map(String::as_str)
-        .collect();
+    let packages: Vec<String> = receipt.packages.value().unwrap();
 
     assert_eq!(
         packages,
@@ -72,21 +54,12 @@ fn circular_imports_do_not_recurse_forever() {
     let receipt = Receipt::from_file(&path).unwrap();
 
     assert_eq!(
-        receipt.from.value().unwrap().map(String::as_str),
+        receipt.from.value().unwrap().as_deref(),
         Some("cycle-a-image")
     );
-    assert_eq!(
-        receipt.name.value().unwrap().map(String::as_str),
-        Some("Cycle A")
-    );
+    assert_eq!(receipt.name.value().unwrap().as_deref(), Some("Cycle A"));
 
-    let packages: Vec<&str> = receipt
-        .packages
-        .value()
-        .unwrap()
-        .into_iter()
-        .map(String::as_str)
-        .collect();
+    let packages: Vec<String> = receipt.packages.value().unwrap();
 
     assert_eq!(packages, vec!["cycle-b-pkg", "cycle-a-pkg"]);
 }

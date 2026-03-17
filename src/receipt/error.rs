@@ -19,4 +19,7 @@ pub enum ReceiptError {
 
     #[error("Unsupported distro: {0}")]
     UnsupportedDistro(String),
+
+    #[error("Distro not specified. Add a \"distro\" field to your receipt.")]
+    DistroNotSpecified,
 }

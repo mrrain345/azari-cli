@@ -1,5 +1,6 @@
 use clap::Args;
 
+use crate::builder::Builder;
 use crate::receipt::{Receipt, ReceiptError};
 
 use super::Cli;
@@ -13,8 +14,12 @@ pub struct BuildArgs {
 impl BuildArgs {
     pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
         let path = cli.receipt_path()?;
-        let _receipt = Receipt::from_file(&path)?;
-        println!("Receipt loaded from {}", path.display());
+        let receipt = Receipt::from_file(&path)?;
+        let builder = Builder::from_receipt(receipt)?;
+
+        let output = builder.to_containerfile();
+        println!("{output}");
+
         Ok(())
     }
 }
