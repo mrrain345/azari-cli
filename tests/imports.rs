@@ -11,6 +11,8 @@ fn import_merges_fields_and_lists() {
     let path = receipts_dir().join("imports/root-imports.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
 
+    assert_eq!(receipt.distro.value().unwrap().as_deref(), Some("arch"));
+
     assert_eq!(
         receipt.from.value().unwrap().as_deref(),
         Some("root-image:latest")
@@ -34,10 +36,7 @@ fn duplicate_import_is_ignored() {
     let path = receipts_dir().join("imports/root-duplicate.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
 
-    assert_eq!(
-        receipt.from.value().unwrap().as_deref(),
-        Some("dup-root-image")
-    );
+    assert_eq!(receipt.distro.value().unwrap().as_deref(), Some("arch"));
     assert_eq!(receipt.name.value().unwrap().as_deref(), Some("Dup Root"));
 
     let packages: Vec<String> = receipt.packages.value().unwrap();

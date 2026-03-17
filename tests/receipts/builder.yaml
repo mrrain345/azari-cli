@@ -1,0 +1,4 @@
+distro: arch
+from: arch-bootc:latest
+name: Azari OS
+hostname: azari

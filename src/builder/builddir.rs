@@ -66,3 +66,53 @@ impl BuildDir {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn temp_dir_exists_after_creation() {
+        let dir = BuildDir::temp().unwrap();
+        assert!(dir.path().exists());
+    }
+
+    #[test]
+    fn temp_dir_is_removed_on_drop() {
+        let dir = BuildDir::temp().unwrap();
+        let path = dir.path().to_owned();
+        drop(dir);
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn persistent_creates_nonexistent_dir() {
+        let base = tempfile::tempdir().unwrap();
+        let target = base.path().join("new-build-dir");
+        assert!(!target.exists());
+        let dir = BuildDir::persistent(target.clone()).unwrap();
+        assert!(dir.path().exists());
+    }
+
+    #[test]
+    fn persistent_accepts_empty_existing_dir() {
+        let base = tempfile::tempdir().unwrap();
+        let target = base.path().join("empty");
+        std::fs::create_dir(&target).unwrap();
+        let dir = BuildDir::persistent(target.clone()).unwrap();
+        assert_eq!(dir.path(), target);
+    }
+
+    #[test]
+    fn persistent_fails_on_non_empty_dir() {
+        use crate::receipt::ReceiptError;
+
+        let base = tempfile::tempdir().unwrap();
+        let target = base.path().join("non-empty");
+        std::fs::create_dir(&target).unwrap();
+        std::fs::write(target.join("file.txt"), b"data").unwrap();
+
+        let result = BuildDir::persistent(target);
+        assert!(matches!(result, Err(ReceiptError::BuildDirNotEmpty(_))));
+    }
+}

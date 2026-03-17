@@ -28,8 +28,8 @@ impl BuildArgs {
 
         let builder = Builder::from_receipt(receipt, build_dir)?;
 
-        let output = builder.to_containerfile();
-        println!("{output}");
+        let containerfile = builder.write_containerfile()?;
+        println!("Containerfile written to: {}", containerfile.display());
 
         Ok(())
     }

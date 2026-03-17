@@ -3,7 +3,7 @@ import:
   - base.yaml
   - dup-mid.yaml
 
-from: dup-root-image
+distro: arch
 name: Dup Root
 hostname: dup-root-host
 
