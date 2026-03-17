@@ -5,7 +5,9 @@ use serde::Deserialize;
 
 use crate::receipt::{
     ReceiptError, ReceiptField, ReceiptImport,
-    fields::{DistroField, FilesField, FromField, HostnameField, NameField, PackagesField},
+    fields::{
+        DistroField, FilesField, FromField, HostnameField, InstallField, NameField, PackagesField,
+    },
     path::SourcePathGuard,
 };
 
@@ -21,8 +23,10 @@ pub struct Receipt {
     pub from: FromField,
     pub name: NameField,
     pub hostname: HostnameField,
+    pub preinstall: InstallField,
     pub packages: PackagesField,
     pub files: FilesField,
+    pub postinstall: InstallField,
 }
 
 impl Receipt {
@@ -38,8 +42,10 @@ impl Receipt {
             from: self.from.merge(other.from),
             name: self.name.merge(other.name),
             hostname: self.hostname.merge(other.hostname),
+            preinstall: self.preinstall.merge(other.preinstall),
             packages: self.packages.merge(other.packages),
             files: self.files.merge(other.files),
+            postinstall: self.postinstall.merge(other.postinstall),
         }
     }
 
