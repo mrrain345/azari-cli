@@ -1,4 +1,5 @@
 import:
   - does-not-exist.yaml
 
+distro: arch
 name: Missing Import Root

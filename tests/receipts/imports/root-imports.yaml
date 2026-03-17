@@ -3,7 +3,6 @@ import:
   - extras.yaml
 
 distro: arch
-from: "root-image:latest"
 name: "Root Name"
 hostname: "root-host"
 

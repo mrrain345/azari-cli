@@ -1,0 +1,10 @@
+distro: arch
+
+files:
+  /etc/motd:
+    content: "Hello from Azari"
+  /etc/sysconfig:
+    owner: root
+    group: wheel
+    chmod: "644"
+    content: "[config]"

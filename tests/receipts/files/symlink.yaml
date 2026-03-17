@@ -1,0 +1,9 @@
+distro: arch
+
+files:
+  /usr/bin/sh:
+    symlink: /usr/bin/bash
+  /tmp/owned-link:
+    owner: user
+    group: grp
+    symlink: /real/path

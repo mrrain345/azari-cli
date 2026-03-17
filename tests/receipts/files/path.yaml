@@ -1,0 +1,5 @@
+distro: arch
+
+files:
+  /etc/builder:
+    path: ../builder.yaml

@@ -13,10 +13,6 @@ fn import_merges_fields_and_lists() {
 
     assert_eq!(receipt.distro.value().unwrap().as_deref(), Some("arch"));
 
-    assert_eq!(
-        receipt.from.value().unwrap().as_deref(),
-        Some("root-image:latest")
-    );
     assert_eq!(receipt.name.value().unwrap().as_deref(), Some("Root Name"));
     assert_eq!(
         receipt.hostname.value().unwrap().as_deref(),

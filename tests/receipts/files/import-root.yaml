@@ -1,0 +1,8 @@
+import:
+  - import-base.yaml
+
+distro: arch
+
+files:
+  /etc/root-file:
+    content: from-root

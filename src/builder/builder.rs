@@ -32,6 +32,7 @@ impl Builder {
         receipt.name.build(&mut builder)?;
         receipt.hostname.build(&mut builder)?;
         receipt.packages.build(&mut builder)?;
+        receipt.files.build(&mut builder)?;
 
         Ok(builder)
     }

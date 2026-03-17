@@ -1,0 +1,7 @@
+distro: arch
+
+files:
+  /etc/path with spaces:
+    content: "spaces content"
+  /usr/link with spaces:
+    symlink: /real/target with spaces

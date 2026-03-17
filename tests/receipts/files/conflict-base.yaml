@@ -1,0 +1,3 @@
+files:
+  /etc/conflict:
+    content: base-version

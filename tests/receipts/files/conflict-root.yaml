@@ -1,0 +1,8 @@
+import:
+  - conflict-base.yaml
+
+distro: arch
+
+files:
+  /etc/conflict:
+    content: root-version

@@ -11,6 +11,8 @@ fn load_fields_receipt() {
     let path = receipts_dir().join("fields-full.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
 
+    assert_eq!(receipt.distro.value().unwrap().as_deref(), Some("arch"));
+
     assert_eq!(
         receipt.from.value().unwrap().as_deref(),
         Some("arch-bootc:latest")
