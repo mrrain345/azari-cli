@@ -22,4 +22,7 @@ pub enum ReceiptError {
 
     #[error("Distro not specified. Add a \"distro\" field to your receipt.")]
     DistroNotSpecified,
+
+    #[error("Build directory is not empty: {0}")]
+    BuildDirNotEmpty(std::path::PathBuf),
 }

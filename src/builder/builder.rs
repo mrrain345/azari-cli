@@ -1,22 +1,29 @@
 use crate::distro::Distro;
 use crate::receipt::{Receipt, ReceiptError};
 
+use super::BuildDir;
+
 /// Trait for building a Containerfile from a receipt field.
 pub trait Build {
     fn build(self, builder: &mut Builder) -> Result<(), ReceiptError>;
 }
 
 /// In-memory Containerfile builder.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Builder {
     distro: Option<Distro>,
     lines: Vec<String>,
+    build_dir: BuildDir,
 }
 
 impl Builder {
     /// Builds containerfile lines from a receipt.
-    pub fn from_receipt(receipt: Receipt) -> Result<Self, ReceiptError> {
-        let mut builder = Builder::default();
+    pub fn from_receipt(receipt: Receipt, build_dir: BuildDir) -> Result<Self, ReceiptError> {
+        let mut builder = Builder {
+            distro: None,
+            lines: Vec::new(),
+            build_dir,
+        };
 
         // `distro` must be built first — it populates `builder.distro`,
         // which other fields read from during their build step.
@@ -46,6 +53,11 @@ impl Builder {
     /// Appends a single Containerfile instruction line.
     pub(crate) fn push(&mut self, line: impl Into<String>) {
         self.lines.push(line.into());
+    }
+
+    /// Returns the path to the build directory.
+    pub fn build_dir(&self) -> &std::path::Path {
+        self.build_dir.path()
     }
 
     /// Renders all instruction lines into a single Containerfile string.
