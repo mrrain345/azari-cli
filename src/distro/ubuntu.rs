@@ -1,4 +1,4 @@
-use crate::distro::DistroOps;
+use crate::distro::{DistroOps, UserConfig};
 
 pub struct Ubuntu;
 
@@ -24,5 +24,9 @@ impl DistroOps for Ubuntu {
             "RUN apt-get update && apt-get install -y {} && apt-get clean && rm -rf /var/lib/apt/lists/*",
             packages.join(" ")
         ))
+    }
+
+    fn add_user(&self, config: &UserConfig) -> Vec<String> {
+        crate::distro::common::add_user(config)
     }
 }

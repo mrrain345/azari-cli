@@ -33,6 +33,7 @@ impl Builder {
         receipt.hostname.build(&mut builder)?;
         receipt.preinstall.build(&mut builder)?;
         receipt.packages.build(&mut builder)?;
+        receipt.users.build(&mut builder)?;
         receipt.files.build(&mut builder)?;
         receipt.postinstall.build(&mut builder)?;
 

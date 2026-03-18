@@ -3,6 +3,7 @@ use serde::Deserialize;
 use std::{ops::Deref, str::FromStr};
 
 pub mod arch;
+pub mod common;
 pub mod debian;
 pub mod fedora;
 pub mod ubuntu;
@@ -38,6 +39,24 @@ impl FromStr for Distro {
     }
 }
 
+/// Parameters for creating a user account inside a container image.
+pub struct UserConfig<'a> {
+    pub username: &'a str,
+    /// GECOS / display name.
+    pub fullname: Option<&'a str>,
+    /// Pre-hashed (crypt(3)) password string, passed directly to `useradd -p`.
+    /// When `None` the account is left passwordless via `passwd -d`.
+    pub password: Option<&'a str>,
+    /// Numeric UID. `None` lets the system choose.
+    pub uid: Option<u32>,
+    /// Login shell path (e.g. `/bin/bash`).
+    pub shell: Option<&'a str>,
+    /// Home directory path.
+    pub home: Option<&'a str>,
+    /// Supplementary group names.
+    pub groups: &'a [String],
+}
+
 /// Distro specific operations.
 pub trait DistroOps {
     /// Codename of this distro.
@@ -51,6 +70,9 @@ pub trait DistroOps {
 
     /// Build instruction for installing packages.
     fn install_packages(&self, packages: &[&str]) -> Option<String>;
+
+    /// Containerfile instructions to create a user account.
+    fn add_user(&self, config: &UserConfig) -> Vec<String>;
 }
 
 #[cfg(test)]

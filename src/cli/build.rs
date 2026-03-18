@@ -27,9 +27,7 @@ impl BuildArgs {
         };
 
         let builder = Builder::from_receipt(receipt, build_dir)?;
-
-        let containerfile = builder.write_containerfile()?;
-        println!("Containerfile written to: {}", containerfile.display());
+        builder.write_containerfile()?;
 
         Ok(())
     }

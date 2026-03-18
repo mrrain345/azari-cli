@@ -7,6 +7,7 @@ use crate::receipt::{
     ReceiptError, ReceiptField, ReceiptImport,
     fields::{
         DistroField, FilesField, FromField, HostnameField, InstallField, NameField, PackagesField,
+        UsersField,
     },
     path::SourcePathGuard,
 };
@@ -25,6 +26,7 @@ pub struct Receipt {
     pub hostname: HostnameField,
     pub preinstall: InstallField,
     pub packages: PackagesField,
+    pub users: UsersField,
     pub files: FilesField,
     pub postinstall: InstallField,
 }
@@ -44,6 +46,7 @@ impl Receipt {
             hostname: self.hostname.merge(other.hostname),
             preinstall: self.preinstall.merge(other.preinstall),
             packages: self.packages.merge(other.packages),
+            users: self.users.merge(other.users),
             files: self.files.merge(other.files),
             postinstall: self.postinstall.merge(other.postinstall),
         }

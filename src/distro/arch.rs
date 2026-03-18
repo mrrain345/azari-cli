@@ -1,4 +1,4 @@
-use crate::distro::DistroOps;
+use crate::distro::{DistroOps, UserConfig};
 
 pub struct Arch;
 
@@ -21,5 +21,9 @@ impl DistroOps for Arch {
         }
 
         Some(format!("RUN pacman -S --noconfirm {}", packages.join(" ")))
+    }
+
+    fn add_user(&self, config: &UserConfig) -> Vec<String> {
+        crate::distro::common::add_user(config)
     }
 }
