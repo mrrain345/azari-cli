@@ -25,4 +25,10 @@ pub enum ReceiptError {
 
     #[error("Build directory is not empty: {0}")]
     BuildDirNotEmpty(std::path::PathBuf),
+
+    #[error("podman build failed with exit code {0}")]
+    PodmanBuildFailed(i32),
+
+    #[error("Image name not specified. Add an \"image\" field to your receipt.")]
+    ImageNotSpecified,
 }

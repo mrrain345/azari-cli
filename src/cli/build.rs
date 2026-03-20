@@ -14,6 +14,22 @@ pub struct BuildArgs {
     /// When omitted a temporary directory is used and cleaned up on exit.
     #[arg(short = 'b', long, value_name = "PATH")]
     pub build_dir: Option<PathBuf>,
+
+    /// Version tag for the image (e.g. `1.0.0`). The image is always tagged
+    /// as `<image>:latest`; when this flag is set it is also tagged as
+    /// `<image>:<version>`. The image name comes from the `image` field in
+    /// the receipt.
+    #[arg(short = 'v', long, value_name = "VERSION")]
+    pub version: Option<String>,
+
+    /// Override the image name from the receipt (e.g. `docker.io/myorg/myimage`).
+    /// Takes precedence over the `image` field in the receipt.
+    #[arg(short = 'i', long, value_name = "IMAGE")]
+    pub image: Option<String>,
+
+    /// Generate the Containerfile but skip running `podman build`.
+    #[arg(long)]
+    pub dry: bool,
 }
 
 impl BuildArgs {
@@ -26,8 +42,14 @@ impl BuildArgs {
             None => BuildDir::temp()?,
         };
 
-        let builder = Builder::from_receipt(receipt, build_dir)?;
+        let mut builder = Builder::from_receipt(receipt, build_dir, self.version.clone())?;
+        if let Some(image) = &self.image {
+            builder.set_image(image.clone());
+        }
         builder.write_containerfile()?;
+        if !self.dry {
+            builder.podman_build()?;
+        }
 
         Ok(())
     }

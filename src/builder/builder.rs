@@ -12,15 +12,23 @@ pub trait Build {
 #[derive(Debug)]
 pub struct Builder {
     distro: Option<Distro>,
+    image: Option<String>,
+    version: Option<String>,
     lines: Vec<String>,
     build_dir: BuildDir,
 }
 
 impl Builder {
     /// Builds containerfile lines from a receipt.
-    pub fn from_receipt(receipt: Receipt, build_dir: BuildDir) -> Result<Self, ReceiptError> {
+    pub fn from_receipt(
+        receipt: Receipt,
+        build_dir: BuildDir,
+        version: Option<String>,
+    ) -> Result<Self, ReceiptError> {
         let mut builder = Builder {
             distro: None,
+            image: None,
+            version,
             lines: Vec::new(),
             build_dir,
         };
@@ -28,13 +36,14 @@ impl Builder {
         // `distro` must be built first — it populates `builder.distro`,
         // which other fields read from during their build step.
         receipt.distro.build(&mut builder)?;
+        receipt.image.build(&mut builder)?;
         receipt.from.build(&mut builder)?;
         receipt.name.build(&mut builder)?;
         receipt.hostname.build(&mut builder)?;
-        receipt.preinstall.build(&mut builder)?;
-        receipt.packages.build(&mut builder)?;
-        receipt.users.build(&mut builder)?;
         receipt.files.build(&mut builder)?;
+        receipt.preinstall.build(&mut builder)?;
+        receipt.users.build(&mut builder)?;
+        receipt.packages.build(&mut builder)?;
         receipt.postinstall.build(&mut builder)?;
 
         Ok(builder)
@@ -45,6 +54,21 @@ impl Builder {
     /// Must be called before [`Builder::distro`].
     pub(crate) fn set_distro(&mut self, distro: Distro) {
         self.distro = Some(distro);
+    }
+
+    /// Stores the image name for use as a base for `podman build -t` tags.
+    pub(crate) fn set_image(&mut self, image: String) {
+        self.image = Some(image);
+    }
+
+    /// Returns the image name, or `None` if not set.
+    pub fn image(&self) -> Option<&str> {
+        self.image.as_deref()
+    }
+
+    /// Returns the version, or `None` if not set.
+    pub fn version(&self) -> Option<&str> {
+        self.version.as_deref()
     }
 
     /// Returns the resolved distro.
@@ -82,6 +106,44 @@ impl Builder {
         std::fs::write(&path, self.to_containerfile())?;
         Ok(path)
     }
+
+    /// Runs `podman build` in the build directory using the generated Containerfile.
+    ///
+    /// Uses the `image` field as the base name. Tags the image as `<image>:latest`
+    /// always, and additionally as `<image>:<version>` when a version was provided
+    /// to [`Builder::from_receipt`].
+    ///
+    /// Returns [`ReceiptError::ImageNotSpecified`] if no image name was set.
+    pub fn podman_build(&self) -> Result<(), ReceiptError> {
+        let image = self
+            .image
+            .as_deref()
+            .ok_or(ReceiptError::ImageNotSpecified)?;
+
+        let mut cmd = std::process::Command::new("podman");
+        cmd.arg("build")
+            .arg("--cap-add=all")
+            .arg("--security-opt=label=type:container_runtime_t")
+            .arg("--device")
+            .arg("/dev/fuse")
+            .arg("--network=host")
+            .arg("-f")
+            .arg("Containerfile")
+            .arg("-t")
+            .arg(format!("{image}:latest"));
+
+        if let Some(ver) = self.version.as_deref() {
+            cmd.arg("-t").arg(format!("{image}:{ver}"));
+        }
+
+        let status = cmd.arg(".").current_dir(self.build_dir.path()).status()?;
+
+        if !status.success() {
+            return Err(ReceiptError::PodmanBuildFailed(status.code().unwrap_or(-1)));
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -101,7 +163,7 @@ mod tests {
     fn write_containerfile_creates_file() {
         let build_dir = BuildDir::temp().unwrap();
         let path = build_dir.path().to_owned();
-        let builder = Builder::from_receipt(receipt_fixture(), build_dir).unwrap();
+        let builder = Builder::from_receipt(receipt_fixture(), build_dir, None).unwrap();
         builder.write_containerfile().unwrap();
         assert!(path.join("Containerfile").exists());
     }
@@ -109,7 +171,7 @@ mod tests {
     #[test]
     fn write_containerfile_content_matches() {
         let build_dir = BuildDir::temp().unwrap();
-        let builder = Builder::from_receipt(receipt_fixture(), build_dir).unwrap();
+        let builder = Builder::from_receipt(receipt_fixture(), build_dir, None).unwrap();
         let file_path = builder.write_containerfile().unwrap();
         let written = std::fs::read_to_string(&file_path).unwrap();
         assert_eq!(written, builder.to_containerfile());

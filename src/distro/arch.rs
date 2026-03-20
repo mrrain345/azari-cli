@@ -20,7 +20,7 @@ impl DistroOps for Arch {
             return None;
         }
 
-        Some(format!("RUN pacman -S --noconfirm {}", packages.join(" ")))
+        Some(format!("RUN pacman -Sy --noconfirm {}", packages.join(" ")))
     }
 
     fn add_user(&self, config: &UserConfig) -> Vec<String> {

@@ -6,8 +6,8 @@ use serde::Deserialize;
 use crate::receipt::{
     ReceiptError, ReceiptField, ReceiptImport,
     fields::{
-        DistroField, FilesField, FromField, HostnameField, InstallField, NameField, PackagesField,
-        UsersField,
+        DistroField, FilesField, FromField, HostnameField, ImageField, InstallField, NameField,
+        PackagesField, UsersField,
     },
     path::SourcePathGuard,
 };
@@ -21,13 +21,14 @@ pub struct Receipt {
     pub distro: DistroField,
 
     pub import: ReceiptImport,
+    pub image: ImageField,
     pub from: FromField,
     pub name: NameField,
     pub hostname: HostnameField,
-    pub preinstall: InstallField,
-    pub packages: PackagesField,
-    pub users: UsersField,
     pub files: FilesField,
+    pub preinstall: InstallField,
+    pub users: UsersField,
+    pub packages: PackagesField,
     pub postinstall: InstallField,
 }
 
@@ -41,13 +42,14 @@ impl Receipt {
         Self {
             distro: self.distro.merge(other.distro),
             import: self.import.merge(other.import),
+            image: self.image.merge(other.image),
             from: self.from.merge(other.from),
             name: self.name.merge(other.name),
             hostname: self.hostname.merge(other.hostname),
-            preinstall: self.preinstall.merge(other.preinstall),
-            packages: self.packages.merge(other.packages),
-            users: self.users.merge(other.users),
             files: self.files.merge(other.files),
+            preinstall: self.preinstall.merge(other.preinstall),
+            users: self.users.merge(other.users),
+            packages: self.packages.merge(other.packages),
             postinstall: self.postinstall.merge(other.postinstall),
         }
     }
