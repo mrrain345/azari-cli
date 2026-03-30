@@ -29,6 +29,18 @@ pub enum ReceiptError {
     #[error("podman build failed with exit code {0}")]
     PodmanBuildFailed(i32),
 
+    #[error("podman transfer (save | load) failed with exit code {0}")]
+    PodmanTransferFailed(i32),
+
     #[error("Image name not specified. Add an \"image\" field to your receipt.")]
     ImageNotSpecified,
+
+    #[error("Install failed with exit code {0}")]
+    InstallFailed(i32),
+
+    #[error("Target file {0} already exists. Use --wipe to overwrite.")]
+    FileExistsWithoutWipe(std::path::PathBuf),
+
+    #[error("fallocate failed with exit code {0}")]
+    FallocateFailed(i32),
 }

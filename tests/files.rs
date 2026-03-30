@@ -83,7 +83,7 @@ fn build_content_file_writes_to_builddir() {
     let receipt = Receipt::from_file(&path).unwrap();
     let build_dir = BuildDir::temp().unwrap();
     let dir_path = build_dir.path().to_owned();
-    let _builder = Builder::from_receipt(receipt, build_dir).unwrap();
+    let _builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
 
     let motd = find_build_file(&dir_path, "etc_motd--").expect("etc_motd-- file not found");
     assert_eq!(std::fs::read_to_string(&motd).unwrap(), "Hello from Azari");
@@ -98,7 +98,7 @@ fn build_content_file_emits_copy_instructions() {
     let path = files_dir().join("content.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
     let build_dir = BuildDir::temp().unwrap();
-    let builder = Builder::from_receipt(receipt, build_dir).unwrap();
+    let builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
     let cf = builder.to_containerfile();
 
     assert!(
@@ -119,7 +119,7 @@ fn build_symlink_emits_run_ln_instruction() {
     let path = files_dir().join("symlink.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
     let build_dir = BuildDir::temp().unwrap();
-    let builder = Builder::from_receipt(receipt, build_dir).unwrap();
+    let builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
     let cf = builder.to_containerfile();
 
     assert!(
@@ -133,7 +133,7 @@ fn build_symlink_with_owner_and_group_emits_chown() {
     let path = files_dir().join("symlink.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
     let build_dir = BuildDir::temp().unwrap();
-    let builder = Builder::from_receipt(receipt, build_dir).unwrap();
+    let builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
     let cf = builder.to_containerfile();
 
     assert!(
@@ -152,7 +152,7 @@ fn build_path_file_copies_to_builddir() {
     let receipt = Receipt::from_file(&path).unwrap();
     let build_dir = BuildDir::temp().unwrap();
     let dir_path = build_dir.path().to_owned();
-    let _builder = Builder::from_receipt(receipt, build_dir).unwrap();
+    let _builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
 
     find_build_file(&dir_path, "etc_builder--").expect("etc_builder-- file not found");
 }
@@ -162,7 +162,7 @@ fn build_path_file_emits_copy_instruction() {
     let path = files_dir().join("path.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
     let build_dir = BuildDir::temp().unwrap();
-    let builder = Builder::from_receipt(receipt, build_dir).unwrap();
+    let builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
     let cf = builder.to_containerfile();
 
     assert!(
@@ -213,7 +213,7 @@ fn spaces_in_target_produce_safe_build_dir_filename() {
     let receipt = Receipt::from_file(&path).unwrap();
     let build_dir = BuildDir::temp().unwrap();
     let dir_path = build_dir.path().to_owned();
-    let _builder = Builder::from_receipt(receipt, build_dir).unwrap();
+    let _builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
 
     // The build-dir file must not have spaces in its name.
     let file = find_build_file(&dir_path, "etc_path_with_spaces--")
@@ -226,7 +226,7 @@ fn spaces_in_content_target_use_quoted_copy_instruction() {
     let path = files_dir().join("spaces.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
     let build_dir = BuildDir::temp().unwrap();
-    let builder = Builder::from_receipt(receipt, build_dir).unwrap();
+    let builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
     let cf = builder.to_containerfile();
 
     // COPY destination with spaces must use the JSON array form.
@@ -242,7 +242,7 @@ fn spaces_in_symlink_paths_are_shell_quoted() {
     let path = files_dir().join("spaces.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
     let build_dir = BuildDir::temp().unwrap();
-    let builder = Builder::from_receipt(receipt, build_dir).unwrap();
+    let builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
     let cf = builder.to_containerfile();
 
     assert!(

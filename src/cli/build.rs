@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use clap::Args;
 
+use crate::builder::command::{podman_build, podman_prune};
+
 use crate::builder::{BuildDir, Builder};
 use crate::receipt::{Receipt, ReceiptError};
 
@@ -46,9 +48,18 @@ impl BuildArgs {
         if let Some(image) = &self.image {
             builder.set_image(image.clone());
         }
+
+        let image = builder
+            .image()
+            .ok_or(ReceiptError::ImageNotSpecified)?
+            .to_string();
+
         builder.write_containerfile()?;
+
         if !self.dry {
-            builder.podman_build()?;
+            podman_build(builder.build_dir(), &image, builder.version())?;
+            // Prune dangling layers left by the previous build of this image.
+            podman_prune();
         }
 
         Ok(())

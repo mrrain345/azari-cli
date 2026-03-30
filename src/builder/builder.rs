@@ -106,44 +106,6 @@ impl Builder {
         std::fs::write(&path, self.to_containerfile())?;
         Ok(path)
     }
-
-    /// Runs `podman build` in the build directory using the generated Containerfile.
-    ///
-    /// Uses the `image` field as the base name. Tags the image as `<image>:latest`
-    /// always, and additionally as `<image>:<version>` when a version was provided
-    /// to [`Builder::from_receipt`].
-    ///
-    /// Returns [`ReceiptError::ImageNotSpecified`] if no image name was set.
-    pub fn podman_build(&self) -> Result<(), ReceiptError> {
-        let image = self
-            .image
-            .as_deref()
-            .ok_or(ReceiptError::ImageNotSpecified)?;
-
-        let mut cmd = std::process::Command::new("podman");
-        cmd.arg("build")
-            .arg("--cap-add=all")
-            .arg("--security-opt=label=type:container_runtime_t")
-            .arg("--device")
-            .arg("/dev/fuse")
-            .arg("--network=host")
-            .arg("-f")
-            .arg("Containerfile")
-            .arg("-t")
-            .arg(format!("{image}:latest"));
-
-        if let Some(ver) = self.version.as_deref() {
-            cmd.arg("-t").arg(format!("{image}:{ver}"));
-        }
-
-        let status = cmd.arg(".").current_dir(self.build_dir.path()).status()?;
-
-        if !status.success() {
-            return Err(ReceiptError::PodmanBuildFailed(status.code().unwrap_or(-1)));
-        }
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]

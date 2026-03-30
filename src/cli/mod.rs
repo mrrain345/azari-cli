@@ -5,8 +5,10 @@ use clap::{Parser, Subcommand};
 use crate::receipt::ReceiptError;
 
 pub mod build;
+pub mod install;
 
 use build::BuildArgs;
+use install::InstallArgs;
 
 /// Azari CLI
 #[derive(Debug, Parser)]
@@ -44,12 +46,15 @@ impl Cli {
 pub enum Command {
     /// Build the receipt
     Build(BuildArgs),
+    /// Install the latest image onto a block device
+    Install(InstallArgs),
 }
 
 impl Command {
     pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
         match self {
             Command::Build(args) => args.run(cli),
+            Command::Install(args) => args.run(cli),
         }
     }
 }
