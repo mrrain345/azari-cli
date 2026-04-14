@@ -40,9 +40,9 @@ impl Builder {
         receipt.from.build(&mut builder)?;
         receipt.name.build(&mut builder)?;
         receipt.hostname.build(&mut builder)?;
+        receipt.users.build(&mut builder)?;
         receipt.files.build(&mut builder)?;
         receipt.preinstall.build(&mut builder)?;
-        receipt.users.build(&mut builder)?;
         receipt.packages.build(&mut builder)?;
         receipt.postinstall.build(&mut builder)?;
 

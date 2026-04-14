@@ -103,7 +103,7 @@ impl Build for FilesField {
         for (target, entry) in files {
             match entry.source {
                 FileSource::Content(content) => {
-                    let filename = target_to_filename(&target, content.as_bytes());
+                    let filename = target_to_filename(&target);
                     let dest = build_dir.join(&filename);
                     std::fs::write(&dest, content)?;
                     builder.push(copy_instruction(
@@ -115,10 +115,24 @@ impl Build for FilesField {
                     ));
                 }
                 FileSource::Path(src_path) => {
-                    let bytes = std::fs::read(&src_path)?;
-                    let filename = target_to_filename(&target, &bytes);
+                    let filename = target_to_filename(&target);
                     let dest = build_dir.join(&filename);
-                    std::fs::write(&dest, &bytes)?;
+                    if src_path.is_dir() {
+                        std::fs::create_dir_all(&dest)?;
+                        let opts = fs_extra::dir::CopyOptions {
+                            copy_inside: true,
+                            ..Default::default()
+                        };
+                        fs_extra::dir::copy(&src_path, &dest, &opts)
+                            .map_err(|e| std::io::Error::other(e))?;
+                    } else {
+                        fs_extra::file::copy(
+                            &src_path,
+                            &dest,
+                            &fs_extra::file::CopyOptions::default(),
+                        )
+                        .map_err(|e| std::io::Error::other(e))?;
+                    }
                     builder.push(copy_instruction(
                         &filename,
                         &target,
@@ -148,16 +162,14 @@ impl Build for FilesField {
     }
 }
 
-/// Derives a unique build-directory filename from a container target path.
+/// Derives a build-directory filename from a container target path.
 ///
-/// All characters that are not alphanumeric, `.`, or `-` are replaced with `_`,
-/// followed by `--` and the first 12 hex characters of the SHA-256 digest of `content`.
+/// All characters that are not alphanumeric, `.`, or `-` are replaced with `_`.
 ///
-/// `/etc/host name` + content → `etc_host_name--<hash12>`
-fn target_to_filename(target: &str, content: &[u8]) -> String {
-    use sha2::{Digest, Sha256};
+/// `/etc/host name` → `etc_host_name`
+fn target_to_filename(target: &str) -> String {
     let stripped = target.trim_start_matches('/');
-    let sanitized: String = stripped
+    stripped
         .chars()
         .map(|c| {
             if c.is_alphanumeric() || c == '.' || c == '-' {
@@ -166,9 +178,7 @@ fn target_to_filename(target: &str, content: &[u8]) -> String {
                 '_'
             }
         })
-        .collect();
-    let hash = format!("{:x}", Sha256::digest(content));
-    format!("{}--{}", sanitized, &hash[..12])
+        .collect()
 }
 
 /// Wraps `s` in single quotes for use as a shell argument.
@@ -239,67 +249,32 @@ mod tests {
         PathBuf::from(s)
     }
 
-    // SHA256("") = e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-    const EMPTY_HASH: &str = "e3b0c44298fc";
-
     // --- target_to_filename ---
 
     #[test]
     fn filename_strips_leading_slash() {
-        assert_eq!(
-            target_to_filename("/etc/hostname", b""),
-            format!("etc_hostname--{EMPTY_HASH}")
-        );
+        assert_eq!(target_to_filename("/etc/hostname"), "etc_hostname");
     }
 
     #[test]
     fn filename_without_leading_slash() {
-        assert_eq!(
-            target_to_filename("etc/hostname", b""),
-            format!("etc_hostname--{EMPTY_HASH}")
-        );
+        assert_eq!(target_to_filename("etc/hostname"), "etc_hostname");
     }
 
     #[test]
     fn filename_deeply_nested_path() {
-        assert_eq!(
-            target_to_filename("/a/b/c/d", b""),
-            format!("a_b_c_d--{EMPTY_HASH}")
-        );
+        assert_eq!(target_to_filename("/a/b/c/d"), "a_b_c_d");
     }
 
     #[test]
     fn filename_spaces_are_replaced() {
-        assert_eq!(
-            target_to_filename("/etc/my file", b""),
-            format!("etc_my_file--{EMPTY_HASH}")
-        );
+        assert_eq!(target_to_filename("/etc/my file"), "etc_my_file");
     }
 
     #[test]
     fn filename_special_chars_are_replaced() {
         // spaces, parens, colons all become underscores
-        let name = target_to_filename("/etc/a b:c(d)", b"");
-        assert!(
-            !name.contains(' '),
-            "name should not contain spaces: {name}"
-        );
-        assert!(name.starts_with("etc_a_b_c_d_--"));
-    }
-
-    #[test]
-    fn filename_different_content_gives_different_hash() {
-        let a = target_to_filename("/etc/f", b"hello");
-        let b = target_to_filename("/etc/f", b"world");
-        assert_ne!(a, b);
-    }
-
-    #[test]
-    fn filename_hash_suffix_is_12_lowercase_hex_chars() {
-        let name = target_to_filename("/etc/test", b"some content");
-        let suffix = name.split("--").nth(1).unwrap();
-        assert_eq!(suffix.len(), 12);
-        assert!(suffix.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_eq!(target_to_filename("/etc/a b:c(d)"), "etc_a_b_c_d_");
     }
 
     // --- shell_quote ---

@@ -25,9 +25,9 @@ pub struct Receipt {
     pub from: FromField,
     pub name: NameField,
     pub hostname: HostnameField,
+    pub users: UsersField,
     pub files: FilesField,
     pub preinstall: InstallField,
-    pub users: UsersField,
     pub packages: PackagesField,
     pub postinstall: InstallField,
 }
@@ -46,9 +46,9 @@ impl Receipt {
             from: self.from.merge(other.from),
             name: self.name.merge(other.name),
             hostname: self.hostname.merge(other.hostname),
+            users: self.users.merge(other.users),
             files: self.files.merge(other.files),
             preinstall: self.preinstall.merge(other.preinstall),
-            users: self.users.merge(other.users),
             packages: self.packages.merge(other.packages),
             postinstall: self.postinstall.merge(other.postinstall),
         }
