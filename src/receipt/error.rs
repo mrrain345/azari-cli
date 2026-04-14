@@ -43,4 +43,7 @@ pub enum ReceiptError {
 
     #[error("fallocate failed with exit code {0}")]
     FallocateFailed(i32),
+
+    #[error("podman push failed with exit code {0}")]
+    PodmanPushFailed(i32),
 }

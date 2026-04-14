@@ -129,7 +129,7 @@ impl Build for FilesField {
                 }
                 FileSource::Symlink(symlink_target) => {
                     builder.push(format!(
-                        "RUN ln -s {} {}",
+                        "RUN ln -sf {} {}",
                         shell_quote(&symlink_target),
                         shell_quote(&target),
                     ));

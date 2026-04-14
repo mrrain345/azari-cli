@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Args;
 
-use crate::builder::command::{podman_build, podman_prune};
+use crate::builder::command::{podman_build, podman_prune, podman_push};
 
 use crate::builder::{BuildDir, Builder};
 use crate::receipt::{Receipt, ReceiptError};
@@ -32,6 +32,10 @@ pub struct BuildArgs {
     /// Generate the Containerfile but skip running `podman build`.
     #[arg(long)]
     pub dry: bool,
+
+    /// Push the image to its registry after a successful build.
+    #[arg(short = 'p', long)]
+    pub push: bool,
 }
 
 impl BuildArgs {
@@ -60,6 +64,10 @@ impl BuildArgs {
             podman_build(builder.build_dir(), &image, builder.version())?;
             // Prune dangling layers left by the previous build of this image.
             podman_prune();
+
+            if self.push {
+                podman_push(&image, builder.version(), true)?;
+            }
         }
 
         Ok(())

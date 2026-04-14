@@ -100,6 +100,41 @@ pub(crate) fn podman_prune_old_root_images(image: &str) {
         .status();
 }
 
+/// Pushes `image` from the user's isolated storage to its remote registry.
+///
+/// When `push_latest` is `true`, pushes `<image>:latest`. When `version` is
+/// `Some`, also pushes `<image>:<version>`.
+pub(crate) fn podman_push(
+    image: &str,
+    version: Option<&str>,
+    push_latest: bool,
+) -> Result<(), ReceiptError> {
+    let push_tag = |tag: &str| -> Result<(), ReceiptError> {
+        let status = std::process::Command::new("podman")
+            .arg("--root")
+            .arg(user_storage())
+            .arg("push")
+            .arg(format!("{image}:{tag}"))
+            .status()?;
+
+        if !status.success() {
+            return Err(ReceiptError::PodmanPushFailed(status.code().unwrap_or(-1)));
+        }
+
+        Ok(())
+    };
+
+    if let Some(ver) = version {
+        push_tag(ver)?;
+    }
+
+    if push_latest {
+        push_tag("latest")?;
+    }
+
+    Ok(())
+}
+
 /// Transfers `image:tag` from the user's isolated storage to root's
 /// storage.
 pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError> {
@@ -167,6 +202,7 @@ pub(crate) fn podman_install(
         .arg("run")
         .arg("-it")
         .arg("--rm")
+        .arg("--pull=newer")
         .arg("--privileged")
         .arg("--pid=host")
         .arg("-v=/dev:/dev")
@@ -199,13 +235,15 @@ pub(crate) fn podman_install(
         .arg("to-disk")
         .arg("--composefs-backend")
         .arg("--bootloader=systemd")
-        .arg("--target-transport=containers-storage");
+        .arg("--filesystem=btrfs");
+    // .arg("--target-transport=containers-storage");
 
     if wipe {
         cmd.arg("--wipe");
     }
 
     if via_loopback {
+        cmd.arg("--generic-image");
         cmd.arg("--via-loopback");
         cmd.arg(loopback_path);
     } else {
