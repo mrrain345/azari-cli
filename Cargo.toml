@@ -5,7 +5,7 @@ edition = "2024"
 description = "Declarative linux builder. Build your own linux image with ease."
 
 [lib]
-name = "azari_cli"
+name = "azari"
 path = "src/lib.rs"
 
 [[bin]]

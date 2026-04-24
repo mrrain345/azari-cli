@@ -2,9 +2,7 @@ use std::path::Path;
 
 use clap::Args;
 
-use crate::builder::command::{
-    fallocate, podman_install, podman_prune_old_root_images, podman_transfer,
-};
+use crate::builder::command::{fallocate, podman_install, podman_prune_old_root_images};
 use crate::receipt::{Receipt, ReceiptError, ReceiptField};
 
 use super::Cli;
@@ -24,7 +22,7 @@ pub struct InstallArgs {
     #[arg(long)]
     pub wipe: bool,
 
-    /// Size to pre-allocate when installing to a file (e.g. `20G`). Defaults to `16G`.
+    /// Image size when installing to a file (e.g. `20G`). Defaults to `16G`.
     #[arg(long, value_name = "SIZE", default_value = "16G")]
     pub size: String,
 }
@@ -66,22 +64,14 @@ impl InstallArgs {
             );
         }
 
-        println!("Transferring image to the root storage…");
-
-        // Move the image from user storage to root storage so it can be
-        // used by sudo podman without touching either account's default store.
-        podman_transfer(&image, version)?;
-
-        println!("Installing image to disk…");
-
         let install_result = podman_install(&image, version, &self.device, self.wipe, via_loopback);
 
         if install_result.is_ok() {
             println!("Pruning old images from root storage…");
 
-            // Remove images matching this image name from root storage that are
-            // older than 30 days. Other images in root storage are never touched.
-            podman_prune_old_root_images(&image);
+            // Remove azari-managed images from root storage that are older
+            // than 30 days (identified by the dev.azari.managed label).
+            podman_prune_old_root_images();
         }
 
         println!("Done.");

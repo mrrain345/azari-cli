@@ -1,4 +1,4 @@
-use azari_cli::cli::Cli;
+use azari::cli::Cli;
 use clap::Parser;
 
 fn main() {

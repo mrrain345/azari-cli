@@ -23,6 +23,8 @@ pub(crate) fn podman_build(
     image: &str,
     version: Option<&str>,
 ) -> Result<(), ReceiptError> {
+    // TODO: Check if podman is installed
+
     let mut cmd = std::process::Command::new("podman");
     cmd.arg("--root")
         .arg(user_storage())
@@ -33,6 +35,7 @@ pub(crate) fn podman_build(
         .arg("--device=/dev/fuse")
         .arg("--network=host")
         .arg("-f=Containerfile")
+        .arg("--label=dev.azari.managed=true")
         .arg(format!("-t={image}:latest"));
 
     if let Some(ver) = version {
@@ -42,7 +45,10 @@ pub(crate) fn podman_build(
     let status = cmd.arg(".").current_dir(build_dir).status()?;
 
     if !status.success() {
-        return Err(ReceiptError::PodmanBuildFailed(status.code().unwrap_or(-1)));
+        return Err(ReceiptError::CommandFailed(
+            "podman build".into(),
+            status.code().unwrap_or(-1),
+        ));
     }
 
     Ok(())
@@ -64,17 +70,17 @@ pub(crate) fn podman_prune() {
         .status();
 }
 
-/// Removes images matching `image` from root's default containers-storage
-/// that are older than 30 days.
+/// Removes images tagged with `dev.azari.managed=true` from root's default
+/// containers-storage that are older than 30 days.
 ///
-/// Only images whose reference (name) matches `image` are considered, so
-/// no other images present in root storage are ever touched. Errors are
-/// silently ignored — this is best-effort cleanup.
-pub(crate) fn podman_prune_old_root_images(image: &str) {
+/// Using the label filter ensures only images built by azari are touched,
+/// regardless of their name. Errors are silently ignored — this is
+/// best-effort cleanup.
+pub(crate) fn podman_prune_old_root_images() {
     let Ok(output) = std::process::Command::new("sudo")
         .arg("podman")
         .arg("images")
-        .arg(format!("--filter=reference={image}"))
+        .arg("--filter=label=dev.azari.managed=true")
         .arg("--filter=until=720h") // 30 days
         .arg("--quiet")
         .output()
@@ -118,7 +124,10 @@ pub(crate) fn podman_push(
             .status()?;
 
         if !status.success() {
-            return Err(ReceiptError::PodmanPushFailed(status.code().unwrap_or(-1)));
+            return Err(ReceiptError::CommandFailed(
+                "podman push".into(),
+                status.code().unwrap_or(-1),
+            ));
         }
 
         Ok(())
@@ -160,12 +169,14 @@ pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError
     let save_status = save.wait()?;
 
     if !save_status.success() {
-        return Err(ReceiptError::PodmanTransferFailed(
+        return Err(ReceiptError::CommandFailed(
+            "podman save".into(),
             save_status.code().unwrap_or(-1),
         ));
     }
     if !load_status.success() {
-        return Err(ReceiptError::PodmanTransferFailed(
+        return Err(ReceiptError::CommandFailed(
+            "podman load".into(),
             load_status.code().unwrap_or(-1),
         ));
     }
@@ -183,7 +194,10 @@ pub(crate) fn fallocate(path: &Path, size: &str) -> Result<(), ReceiptError> {
         .status()?;
 
     if !status.success() {
-        return Err(ReceiptError::FallocateFailed(status.code().unwrap_or(-1)));
+        return Err(ReceiptError::CommandFailed(
+            "fallocate".into(),
+            status.code().unwrap_or(-1),
+        ));
     }
 
     Ok(())
@@ -250,11 +264,62 @@ pub(crate) fn podman_install(
         cmd.arg(device);
     }
 
-    println!("Running command:\n{:?}", cmd);
+    // println!("Running command:\n{:?}", cmd);
 
     let status = cmd.status()?;
     if !status.success() {
-        return Err(ReceiptError::InstallFailed(status.code().unwrap_or(-1)));
+        return Err(ReceiptError::CommandFailed(
+            "bootc install".into(),
+            status.code().unwrap_or(-1),
+        ));
+    }
+
+    Ok(())
+}
+
+/// Switch the running bootc image to `image:version` via sudo.
+///
+/// When `local` is `true`, passes `--transport=containers-storage` so bootc
+/// reads the image from root's containers-storage instead of pulling it from
+/// a remote registry.
+pub(crate) fn bootc_switch(image: &str, version: &str, local: bool) -> Result<(), ReceiptError> {
+    let mut cmd = std::process::Command::new("sudo");
+    cmd.arg("bootc").arg("switch");
+
+    if local {
+        cmd.arg("--transport=containers-storage");
+    }
+
+    cmd.arg(format!("{image}:{version}"));
+
+    let status = cmd.status()?;
+    if !status.success() {
+        return Err(ReceiptError::CommandFailed(
+            "bootc switch".into(),
+            status.code().unwrap_or(-1),
+        ));
+    }
+
+    Ok(())
+}
+
+/// Run `bootc upgrade` on the host via sudo.
+///
+/// When `version` is set, it is passed as `--tag <version>`.
+pub(crate) fn bootc_upgrade(version: Option<&str>) -> Result<(), ReceiptError> {
+    let mut cmd = std::process::Command::new("sudo");
+    cmd.arg("bootc").arg("upgrade");
+
+    if let Some(version) = version {
+        cmd.arg(format!("--tag={version}"));
+    }
+
+    let status = cmd.status()?;
+    if !status.success() {
+        return Err(ReceiptError::CommandFailed(
+            "bootc upgrade".into(),
+            status.code().unwrap_or(-1),
+        ));
     }
 
     Ok(())

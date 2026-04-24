@@ -7,10 +7,14 @@ use crate::receipt::ReceiptError;
 pub mod build;
 pub mod install;
 pub mod push;
+pub mod switch;
+pub mod upgrade;
 
 use build::BuildArgs;
 use install::InstallArgs;
 use push::PushArgs;
+use switch::SwitchArgs;
+use upgrade::UpgradeArgs;
 
 /// Azari CLI
 #[derive(Debug, Parser)]
@@ -52,6 +56,10 @@ pub enum Command {
     Push(PushArgs),
     /// Install the latest image onto a block device
     Install(InstallArgs),
+    /// Switch the bootc image to a specific version
+    Switch(SwitchArgs),
+    /// Upgrade the currently installed bootc system
+    Upgrade(UpgradeArgs),
 }
 
 impl Command {
@@ -60,6 +68,8 @@ impl Command {
             Command::Build(args) => args.run(cli),
             Command::Push(args) => args.run(cli),
             Command::Install(args) => args.run(cli),
+            Command::Switch(args) => args.run(cli),
+            Command::Upgrade(args) => args.run(cli),
         }
     }
 }
