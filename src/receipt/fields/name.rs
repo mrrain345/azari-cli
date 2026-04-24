@@ -57,6 +57,7 @@ impl Build for NameField {
                 builder.push(os_release_sed("VERSION", v));
             }
             builder.push(os_release_sed("PRETTY_NAME", &pretty));
+            builder.set_name(pretty);
         }
         Ok(())
     }

@@ -61,7 +61,12 @@ impl BuildArgs {
         builder.write_containerfile()?;
 
         if !self.dry {
-            podman_build(builder.build_dir(), &image, builder.version())?;
+            podman_build(
+                builder.build_dir(),
+                &image,
+                builder.version(),
+                builder.name(),
+            )?;
             // Prune dangling layers left by the previous build of this image.
             podman_prune();
 

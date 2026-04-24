@@ -22,6 +22,7 @@ pub(crate) fn podman_build(
     build_dir: &Path,
     image: &str,
     version: Option<&str>,
+    name: Option<&str>,
 ) -> Result<(), ReceiptError> {
     // TODO: Check if podman is installed
 
@@ -35,7 +36,24 @@ pub(crate) fn podman_build(
         .arg("--device=/dev/fuse")
         .arg("--network=host")
         .arg("-f=Containerfile")
-        .arg("--label=dev.azari.managed=true")
+        .arg("--label=azari.managed=true")
+        .arg(format!(
+            "--annotation=org.opencontainers.image.created={}",
+            chrono::Utc::now().to_rfc3339()
+        ))
+        .arg(format!(
+            "--annotation=org.opencontainers.image.title={}",
+            name.unwrap_or(image)
+        ))
+        .arg(format!(
+            "--annotation=org.opencontainers.image.version={}",
+            version.unwrap_or("latest")
+        ))
+        .arg(format!(
+            "--annotation=org.opencontainers.image.ref.name={}:{}",
+            image,
+            version.unwrap_or("latest")
+        ))
         .arg(format!("-t={image}:latest"));
 
     if let Some(ver) = version {
@@ -70,17 +88,13 @@ pub(crate) fn podman_prune() {
         .status();
 }
 
-/// Removes images tagged with `dev.azari.managed=true` from root's default
+/// Removes images tagged with `azari.managed=true` from root's default
 /// containers-storage that are older than 30 days.
-///
-/// Using the label filter ensures only images built by azari are touched,
-/// regardless of their name. Errors are silently ignored — this is
-/// best-effort cleanup.
 pub(crate) fn podman_prune_old_root_images() {
     let Ok(output) = std::process::Command::new("sudo")
         .arg("podman")
         .arg("images")
-        .arg("--filter=label=dev.azari.managed=true")
+        .arg("--filter=label=azari.managed=true")
         .arg("--filter=until=720h") // 30 days
         .arg("--quiet")
         .output()
@@ -107,9 +121,6 @@ pub(crate) fn podman_prune_old_root_images() {
 }
 
 /// Pushes `image` from the user's isolated storage to its remote registry.
-///
-/// When `push_latest` is `true`, pushes `<image>:latest`. When `version` is
-/// `Some`, also pushes `<image>:<version>`.
 pub(crate) fn podman_push(
     image: &str,
     version: Option<&str>,
@@ -144,8 +155,7 @@ pub(crate) fn podman_push(
     Ok(())
 }
 
-/// Transfers `image:tag` from the user's isolated storage to root's
-/// storage.
+/// Transfers `image:tag` from the user's isolated storage to root's storage.
 pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError> {
     let mut save = std::process::Command::new("podman")
         .arg("--root")

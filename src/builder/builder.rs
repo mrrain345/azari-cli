@@ -14,6 +14,7 @@ pub struct Builder {
     distro: Option<Distro>,
     image: Option<String>,
     version: Option<String>,
+    name: Option<String>,
     lines: Vec<String>,
     build_dir: BuildDir,
 }
@@ -29,6 +30,7 @@ impl Builder {
             distro: None,
             image: None,
             version,
+            name: None,
             lines: Vec::new(),
             build_dir,
         };
@@ -61,14 +63,24 @@ impl Builder {
         self.image = Some(image);
     }
 
-    /// Returns the image name, or `None` if not set.
+    /// Stores the image pretty name for use in OCI annotations.
+    pub(crate) fn set_name(&mut self, name: String) {
+        self.name = Some(name);
+    }
+
+    /// Returns the image ref name.
     pub fn image(&self) -> Option<&str> {
         self.image.as_deref()
     }
 
-    /// Returns the version, or `None` if not set.
+    /// Returns the version.
     pub fn version(&self) -> Option<&str> {
         self.version.as_deref()
+    }
+
+    /// Returns the pretty name.
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
     }
 
     /// Returns the resolved distro.
