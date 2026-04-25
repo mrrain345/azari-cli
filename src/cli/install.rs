@@ -14,6 +14,10 @@ pub struct InstallArgs {
     #[arg(value_name = "DEVICE")]
     pub device: String,
 
+    /// Container image to install (e.g. `ghcr.io/user/image`).
+    #[arg(long, value_name = "IMAGE")]
+    pub image: Option<String>,
+
     /// Image version tag to install (e.g. `1.0.0`). Defaults to `latest`.
     #[arg(short = 'v', long, value_name = "VERSION")]
     pub version: Option<String>,
@@ -29,12 +33,16 @@ pub struct InstallArgs {
 
 impl InstallArgs {
     pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
-        let path = cli.receipt_path()?;
-        let receipt = Receipt::from_file(&path)?;
-        let image = receipt
-            .image
-            .value()?
-            .ok_or(ReceiptError::ImageNotSpecified)?;
+        let image = if let Some(image) = &self.image {
+            image.clone()
+        } else {
+            let path = cli.receipt_path()?;
+            let receipt = Receipt::from_file(&path)?;
+            receipt
+                .image
+                .value()?
+                .ok_or(ReceiptError::ImageNotSpecified)?
+        };
 
         let version = self.version.as_deref().unwrap_or("latest");
 
