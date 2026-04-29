@@ -12,7 +12,7 @@ impl DistroOps for Fedora {
     }
 
     fn set_hostname(&self, hostname: &str) -> Option<String> {
-        Some(format!("RUN hostnamectl set-hostname {}", hostname))
+        Some(format!("RUN echo '{}' > /etc/hostname", hostname))
     }
 
     fn install_packages(&self, packages: &[&str]) -> Option<String> {
@@ -20,7 +20,10 @@ impl DistroOps for Fedora {
             return None;
         }
 
-        Some(format!("RUN dnf install -y {}", packages.join(" ")))
+        Some(format!(
+            "RUN dnf install -y {} && dnf clean all",
+            packages.join(" ")
+        ))
     }
 
     fn add_user(&self, config: &UserConfig) -> Vec<String> {

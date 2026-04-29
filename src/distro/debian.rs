@@ -12,7 +12,7 @@ impl DistroOps for Debian {
     }
 
     fn set_hostname(&self, hostname: &str) -> Option<String> {
-        Some(format!("RUN hostnamectl set-hostname {}", hostname))
+        Some(format!("RUN echo '{}' > /etc/hostname", hostname))
     }
 
     fn install_packages(&self, packages: &[&str]) -> Option<String> {

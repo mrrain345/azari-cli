@@ -79,9 +79,9 @@ impl InstallArgs {
 
             // Remove azari-managed images from root storage that are older than 30 days
             podman_prune_old_root_images();
-        }
 
-        println!("Done.");
+            println!("Done.");
+        }
 
         install_result
     }

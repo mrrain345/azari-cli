@@ -20,7 +20,12 @@ impl DistroOps for Arch {
             return None;
         }
 
-        Some(format!("RUN pacman -Sy --noconfirm {}", packages.join(" ")))
+        Some(format!(
+            "RUN --mount=type=tmpfs,dst=/tmp \
+            --mount=type=cache,dst=/usr/lib/sysimage/cache/pacman \
+            pacman -Syu --noconfirm {}",
+            packages.join(" ")
+        ))
     }
 
     fn add_user(&self, config: &UserConfig) -> Vec<String> {

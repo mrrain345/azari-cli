@@ -13,6 +13,16 @@ fn user_storage() -> PathBuf {
     PathBuf::from(home).join(".cache/azari/storage")
 }
 
+/// Returns the temporary directory used for user-side builds.
+fn user_tmp_dir() -> PathBuf {
+    let home = std::env::home_dir().expect("Failed to get home directory");
+    let dir = PathBuf::from(home).join(".cache/azari/tmp");
+
+    // Ensure the directory exists before running any podman commands that use it.
+    std::fs::create_dir_all(&dir).expect("Failed to create user tmp directory");
+    dir
+}
+
 /// Runs `podman build` in `build_dir` using an isolated `storage_root` so
 /// the built image is stored separately from the user's regular images.
 ///
@@ -27,7 +37,8 @@ pub(crate) fn podman_build(
     // TODO: Check if podman is installed
 
     let mut cmd = std::process::Command::new("podman");
-    cmd.arg("--root")
+    cmd.env("TMPDIR", user_tmp_dir())
+        .arg("--root")
         .arg(user_storage())
         .arg("build")
         .arg("--pull=newer")
@@ -38,19 +49,19 @@ pub(crate) fn podman_build(
         .arg("-f=Containerfile")
         .arg("--label=azari.managed=true")
         .arg(format!(
-            "--annotation=org.opencontainers.image.created={}",
-            chrono::Utc::now().to_rfc3339()
+            "--label=org.opencontainers.image.created={}",
+            chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
         ))
         .arg(format!(
-            "--annotation=org.opencontainers.image.title={}",
+            "--label=org.opencontainers.image.title={}",
             name.unwrap_or(image)
         ))
         .arg(format!(
-            "--annotation=org.opencontainers.image.version={}",
+            "--label=org.opencontainers.image.version={}",
             version.unwrap_or("latest")
         ))
         .arg(format!(
-            "--annotation=org.opencontainers.image.ref.name={}:{}",
+            "--label=org.opencontainers.image.ref.name={}:{}",
             image,
             version.unwrap_or("latest")
         ))
@@ -59,6 +70,8 @@ pub(crate) fn podman_build(
     if let Some(ver) = version {
         cmd.arg(format!("-t={image}:{ver}"));
     }
+
+    println!("Running command:\n{:?}", cmd);
 
     let status = cmd.arg(".").current_dir(build_dir).status()?;
 
@@ -231,9 +244,9 @@ pub(crate) fn podman_install(
         .arg("--pid=host")
         .arg("-v=/dev:/dev")
         .arg("-v=/var/lib/containers:/var/lib/containers:Z")
-        .arg("-v=/etc/containers:/etc/containers:Z")
-        .arg("-v=/sys/fs/selinux:/sys/fs/selinux")
-        .arg("--security-opt=label=type:unconfined_t");
+        .arg("-v=/etc/containers:/etc/containers:Z");
+    // .arg("-v=/sys/fs/selinux:/sys/fs/selinux")
+    // .arg("--security-opt=label=type:unconfined_t");
 
     let loopback_path: String;
 
@@ -259,7 +272,9 @@ pub(crate) fn podman_install(
         .arg("to-disk")
         .arg("--composefs-backend")
         .arg("--bootloader=systemd")
-        .arg("--filesystem=btrfs");
+        .arg("--filesystem=btrfs")
+        .arg("--disable-selinux");
+    // .arg("--block-setup=tpm2-luks");
     // .arg("--target-transport=containers-storage");
 
     if wipe {
@@ -274,7 +289,7 @@ pub(crate) fn podman_install(
         cmd.arg(device);
     }
 
-    // println!("Running command:\n{:?}", cmd);
+    println!("Running command:\n{:?}", cmd);
 
     let status = cmd.status()?;
     if !status.success() {
