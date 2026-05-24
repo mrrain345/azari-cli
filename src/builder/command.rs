@@ -65,6 +65,19 @@ pub(crate) fn podman_build(
             image,
             version.unwrap_or("latest")
         ))
+        .arg(format!(
+            "--annotation=org.opencontainers.image.title={}",
+            name.unwrap_or(image)
+        ))
+        .arg(format!(
+            "--annotation=org.opencontainers.image.version={}",
+            version.unwrap_or("latest")
+        ))
+        .arg(format!(
+            "--annotation=org.opencontainers.image.ref.name={}:{}",
+            image,
+            version.unwrap_or("latest")
+        ))
         .arg(format!("-t={image}:latest"));
 
     if let Some(ver) = version {
