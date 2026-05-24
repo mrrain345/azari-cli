@@ -68,7 +68,7 @@ impl Build for NameField {
 fn os_release_sed(key: &str, value: &str) -> String {
     let value_e = escape(value);
     format!(
-        "RUN sed -i '/^{key}=/{{s/.*/{key}=\"{value_e}\"/;:a;n;ba}};$a{key}=\"{value_e}\"' /etc/os-release"
+        "RUN sed -i '/^{key}=/{{s/.*/{key}=\"{value_e}\"/;:a;n;ba}};$a{key}=\"{value_e}\"' /etc/os-release /usr/lib/os-release"
     )
 }
 
