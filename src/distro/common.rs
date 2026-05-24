@@ -45,6 +45,14 @@ pub fn add_user(config: &UserConfig) -> Vec<String> {
     instructions
 }
 
+/// Set the hostname via a `tmpfiles.d` configuration.
+pub fn set_hostname(hostname: &str) -> String {
+    format!(
+        "RUN echo f /etc/hostname 0644 root root - {} > /usr/lib/tmpfiles.d/azari-hostname.conf",
+        shell_quote(hostname)
+    )
+}
+
 /// Wraps `s` in POSIX single quotes, escaping any embedded single quotes.
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))

@@ -1,4 +1,4 @@
-use crate::distro::{DistroOps, UserConfig};
+use crate::distro::{DistroOps, UserConfig, common};
 
 pub struct Fedora;
 
@@ -12,7 +12,7 @@ impl DistroOps for Fedora {
     }
 
     fn set_hostname(&self, hostname: &str) -> Option<String> {
-        Some(format!("RUN echo '{}' > /etc/hostname", hostname))
+        Some(common::set_hostname(hostname))
     }
 
     fn install_packages(&self, packages: &[&str]) -> Option<String> {
@@ -27,6 +27,6 @@ impl DistroOps for Fedora {
     }
 
     fn add_user(&self, config: &UserConfig) -> Vec<String> {
-        crate::distro::common::add_user(config)
+        common::add_user(config)
     }
 }
