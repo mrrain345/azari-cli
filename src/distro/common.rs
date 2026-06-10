@@ -48,7 +48,7 @@ pub fn add_user(config: &UserConfig) -> Vec<String> {
 /// Set the hostname via a `tmpfiles.d` configuration.
 pub fn set_hostname(hostname: &str) -> String {
     format!(
-        "RUN echo f /etc/hostname 0644 root root - {} > /usr/lib/tmpfiles.d/azari-hostname.conf",
+        "RUN echo f+ /etc/hostname 0644 root root - {} > /usr/lib/tmpfiles.d/azari-hostname.conf",
         shell_quote(hostname)
     )
 }
