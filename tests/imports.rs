@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use azari_cli::receipt::{Receipt, ReceiptError, ReceiptField};
+use azari::receipt::{Receipt, ReceiptError, ReceiptField};
 
 fn receipts_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/receipts")

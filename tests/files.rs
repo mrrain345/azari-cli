@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use azari_cli::builder::{BuildDir, Builder};
-use azari_cli::receipt::{Receipt, ReceiptError, ReceiptField};
+use azari::builder::{BuildDir, Builder};
+use azari::receipt::{Receipt, ReceiptError, ReceiptField, fields::FileSource};
 
 fn files_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/receipts/files")
@@ -32,8 +32,6 @@ fn load_content_files_field() {
 
 #[test]
 fn load_symlink_files_field() {
-    use azari_cli::receipt::fields::FileSource;
-
     let path = files_dir().join("symlink.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
     let mut entries = receipt.files.value().unwrap();
@@ -53,8 +51,6 @@ fn load_symlink_files_field() {
 
 #[test]
 fn load_path_files_field() {
-    use azari_cli::receipt::fields::FileSource;
-
     let path = files_dir().join("path.yaml");
     let receipt = Receipt::from_file(&path).unwrap();
     let mut entries = receipt.files.value().unwrap();
@@ -67,16 +63,6 @@ fn load_path_files_field() {
 
 // --- Build tests ---
 
-/// Returns the path of the first file in `dir` whose name starts with `prefix`,
-/// or `None` if no such file exists.
-fn find_build_file(dir: &std::path::Path, prefix: &str) -> Option<std::path::PathBuf> {
-    std::fs::read_dir(dir)
-        .ok()?
-        .flatten()
-        .find(|e| e.file_name().to_string_lossy().starts_with(prefix))
-        .map(|e| e.path())
-}
-
 #[test]
 fn build_content_file_writes_to_builddir() {
     let path = files_dir().join("content.yaml");
@@ -85,11 +71,10 @@ fn build_content_file_writes_to_builddir() {
     let dir_path = build_dir.path().to_owned();
     let _builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
 
-    let motd = find_build_file(&dir_path, "etc_motd--").expect("etc_motd-- file not found");
+    let motd = dir_path.join("etc_motd");
     assert_eq!(std::fs::read_to_string(&motd).unwrap(), "Hello from Azari");
 
-    let cfg =
-        find_build_file(&dir_path, "etc_sysconfig--").expect("etc_sysconfig-- file not found");
+    let cfg = dir_path.join("etc_sysconfig");
     assert_eq!(std::fs::read_to_string(&cfg).unwrap(), "[config]");
 }
 
@@ -123,7 +108,7 @@ fn build_symlink_emits_run_ln_instruction() {
     let cf = builder.to_containerfile();
 
     assert!(
-        cf.contains("RUN ln -s '/usr/bin/bash' '/usr/bin/sh'"),
+        cf.contains("RUN ln -sf '/usr/bin/bash' '/usr/bin/sh'"),
         "containerfile:\n{cf}"
     );
 }
@@ -137,7 +122,7 @@ fn build_symlink_with_owner_and_group_emits_chown() {
     let cf = builder.to_containerfile();
 
     assert!(
-        cf.contains("RUN ln -s '/real/path' '/tmp/owned-link'"),
+        cf.contains("RUN ln -sf '/real/path' '/tmp/owned-link'"),
         "containerfile:\n{cf}"
     );
     assert!(
@@ -154,7 +139,10 @@ fn build_path_file_copies_to_builddir() {
     let dir_path = build_dir.path().to_owned();
     let _builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
 
-    find_build_file(&dir_path, "etc_builder--").expect("etc_builder-- file not found");
+    assert!(
+        dir_path.join("etc_builder").exists(),
+        "etc_builder file not found"
+    );
 }
 
 #[test]
@@ -216,8 +204,8 @@ fn spaces_in_target_produce_safe_build_dir_filename() {
     let _builder = Builder::from_receipt(receipt, build_dir, None).unwrap();
 
     // The build-dir file must not have spaces in its name.
-    let file = find_build_file(&dir_path, "etc_path_with_spaces--")
-        .expect("etc_path_with_spaces-- file not found");
+    let file = dir_path.join("etc_path_with_spaces");
+    assert!(file.exists(), "etc_path_with_spaces file not found");
     assert!(!file.file_name().unwrap().to_string_lossy().contains(' '));
 }
 
@@ -246,7 +234,7 @@ fn spaces_in_symlink_paths_are_shell_quoted() {
     let cf = builder.to_containerfile();
 
     assert!(
-        cf.contains("RUN ln -s '/real/target with spaces' '/usr/link with spaces'"),
-        "expected shell-quoted RUN ln -s in containerfile:\n{cf}"
+        cf.contains("RUN ln -sf '/real/target with spaces' '/usr/link with spaces'"),
+        "expected shell-quoted RUN ln -sf in containerfile:\n{cf}"
     );
 }

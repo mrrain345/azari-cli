@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use azari_cli::receipt::{Receipt, ReceiptField};
+use azari::receipt::{Receipt, ReceiptError, ReceiptField};
 
 fn receipts_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/receipts")
@@ -43,8 +43,6 @@ fn load_empty_receipt() {
 
 #[test]
 fn missing_file_returns_io_error() {
-    use azari_cli::receipt::ReceiptError;
-
     let path = receipts_dir().join("does-not-exist.yaml");
     let result = Receipt::from_file(&path);
 
