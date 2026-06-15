@@ -34,4 +34,7 @@ pub enum ReceiptError {
 
     #[error("`{0}` failed with exit code {1}")]
     CommandFailed(String, i32),
+
+    #[error("Command not found: `{0}`. Please install it before proceeding.")]
+    CommandNotFound(String),
 }

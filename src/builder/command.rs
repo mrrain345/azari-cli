@@ -5,6 +5,38 @@ use crate::receipt::ReceiptError;
 
 use super::Builder;
 
+/// Checks whether `name` is available on `PATH`, returning an error if not.
+fn require_command(name: &str) -> Result<(), ReceiptError> {
+    let found = std::env::var_os("PATH")
+        .map(|paths| std::env::split_paths(&paths).any(|dir| dir.join(name).is_file()))
+        .unwrap_or(false);
+    if !found {
+        return Err(ReceiptError::CommandNotFound(name.to_owned()));
+    }
+    Ok(())
+}
+
+/// Executes the given command, returning an error if it fails to start or exits with a non-zero code.
+fn execute_command(
+    mut cmd: std::process::Command,
+    name: impl Into<String>,
+) -> Result<(), ReceiptError> {
+    let name = name.into();
+
+    let status = cmd
+        .status()
+        .map_err(|e| ReceiptError::CommandFailed(name.clone(), e.raw_os_error().unwrap_or(0)))?;
+
+    if !status.success() {
+        return Err(ReceiptError::CommandFailed(
+            name,
+            status.code().unwrap_or(0),
+        ));
+    }
+
+    Ok(())
+}
+
 /// Returns the isolated storage root used for user-side builds.
 fn user_storage() -> PathBuf {
     let home = std::env::home_dir().expect("Failed to get home directory");
@@ -27,7 +59,7 @@ fn user_tmp_dir() -> PathBuf {
 /// When `dry` is `true`, prints the `podman build` command that would be run without executing it,
 /// and adds it as a comment trailer to the Containerfile.
 pub(crate) fn podman_build(builder: &mut Builder, dry: bool) -> Result<(), ReceiptError> {
-    // TODO: Check if podman is installed
+    require_command("podman")?;
     let tmp_dir = user_tmp_dir();
     let image = builder.image()?;
     let build_dir = builder.build_dir();
@@ -69,16 +101,7 @@ pub(crate) fn podman_build(builder: &mut Builder, dry: bool) -> Result<(), Recei
         return Ok(());
     }
 
-    let status = cmd.status()?;
-
-    if !status.success() {
-        return Err(ReceiptError::CommandFailed(
-            "podman build".into(),
-            status.code().unwrap_or(0),
-        ));
-    }
-
-    Ok(())
+    execute_command(cmd, "podman build")
 }
 
 /// Pushes `image` from the user's isolated storage to its remote registry.
@@ -87,22 +110,16 @@ pub(crate) fn podman_push(
     version: Option<&str>,
     push_latest: bool,
 ) -> Result<(), ReceiptError> {
+    require_command("podman")?;
+
     let push_tag = |tag: &str| -> Result<(), ReceiptError> {
-        let status = std::process::Command::new("podman")
-            .arg("--root")
+        let mut cmd = std::process::Command::new("podman");
+        cmd.arg("--root")
             .arg(user_storage())
             .arg("push")
-            .arg(format!("{image}:{tag}"))
-            .status()?;
+            .arg(format!("{image}:{tag}"));
 
-        if !status.success() {
-            return Err(ReceiptError::CommandFailed(
-                "podman push".into(),
-                status.code().unwrap_or(0),
-            ));
-        }
-
-        Ok(())
+        execute_command(cmd, "podman push")
     };
 
     if let Some(ver) = version {
@@ -118,13 +135,19 @@ pub(crate) fn podman_push(
 
 /// Transfers `image:tag` from the user's isolated storage to root's storage.
 pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError> {
+    require_command("sudo")?;
+    require_command("podman")?;
+
     let mut save = std::process::Command::new("podman")
         .arg("--root")
         .arg(user_storage())
         .arg("save")
         .arg(format!("{image}:{tag}"))
         .stdout(Stdio::piped())
-        .spawn()?;
+        .spawn()
+        .map_err(|e| {
+            ReceiptError::CommandFailed("podman save".into(), e.raw_os_error().unwrap_or(0))
+        })?;
 
     let save_stdout = save.stdout.take().expect("save stdout is piped");
 
@@ -135,7 +158,10 @@ pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError
         .arg("podman")
         .arg("load")
         .stdin(save_stdout)
-        .status()?;
+        .status()
+        .map_err(|e| {
+            ReceiptError::CommandFailed("podman load".into(), e.raw_os_error().unwrap_or(0))
+        })?;
 
     let save_status = save.wait()?;
 
@@ -157,21 +183,13 @@ pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError
 
 /// Pre-allocate a file.
 pub(crate) fn fallocate(path: &Path, size: &str) -> Result<(), ReceiptError> {
-    let status = std::process::Command::new("sudo")
-        .arg("fallocate")
-        .arg("-l")
-        .arg(size)
-        .arg(path)
-        .status()?;
+    require_command("sudo")?;
+    require_command("fallocate")?;
 
-    if !status.success() {
-        return Err(ReceiptError::CommandFailed(
-            "fallocate".into(),
-            status.code().unwrap_or(0),
-        ));
-    }
+    let mut cmd = std::process::Command::new("sudo");
+    cmd.arg("fallocate").arg("-l").arg(size).arg(path);
 
-    Ok(())
+    execute_command(cmd, "fallocate")
 }
 
 /// Install the image to the target device.
@@ -182,6 +200,9 @@ pub(crate) fn podman_install(
     wipe: bool,
     via_loopback: bool,
 ) -> Result<(), ReceiptError> {
+    require_command("sudo")?;
+    require_command("podman")?;
+
     let mut cmd = std::process::Command::new("sudo");
     cmd.arg("podman")
         .arg("run")
@@ -237,21 +258,14 @@ pub(crate) fn podman_install(
         cmd.arg(device);
     }
 
-    println!("Running command:\n{:?}", cmd);
-
-    let status = cmd.status()?;
-    if !status.success() {
-        return Err(ReceiptError::CommandFailed(
-            "bootc install".into(),
-            status.code().unwrap_or(0),
-        ));
-    }
-
-    Ok(())
+    execute_command(cmd, "bootc install")
 }
 
 /// Switch the running bootc image to `image:version` via sudo.
 pub(crate) fn bootc_switch(image: &str, version: &str, local: bool) -> Result<(), ReceiptError> {
+    require_command("sudo")?;
+    require_command("bootc")?;
+
     let mut cmd = std::process::Command::new("sudo");
     cmd.arg("bootc").arg("switch");
 
@@ -261,19 +275,14 @@ pub(crate) fn bootc_switch(image: &str, version: &str, local: bool) -> Result<()
 
     cmd.arg(format!("{image}:{version}"));
 
-    let status = cmd.status()?;
-    if !status.success() {
-        return Err(ReceiptError::CommandFailed(
-            "bootc switch".into(),
-            status.code().unwrap_or(0),
-        ));
-    }
-
-    Ok(())
+    execute_command(cmd, "bootc switch")
 }
 
 /// Run `bootc upgrade` on the host via sudo.
 pub(crate) fn bootc_upgrade(version: Option<&str>) -> Result<(), ReceiptError> {
+    require_command("sudo")?;
+    require_command("bootc")?;
+
     let mut cmd = std::process::Command::new("sudo");
     cmd.arg("bootc").arg("upgrade");
 
@@ -281,13 +290,5 @@ pub(crate) fn bootc_upgrade(version: Option<&str>) -> Result<(), ReceiptError> {
         cmd.arg(format!("--tag={version}"));
     }
 
-    let status = cmd.status()?;
-    if !status.success() {
-        return Err(ReceiptError::CommandFailed(
-            "bootc upgrade".into(),
-            status.code().unwrap_or(0),
-        ));
-    }
-
-    Ok(())
+    execute_command(cmd, "bootc upgrade")
 }
