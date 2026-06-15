@@ -3,11 +3,9 @@ use std::process::Stdio;
 
 use crate::receipt::ReceiptError;
 
+use super::Builder;
+
 /// Returns the isolated storage root used for user-side builds.
-///
-/// Uses `$HOME/.cache/azari/storage`, kept separate from the user's regular
-/// podman storage so that azari images never appear in — or are affected by —
-/// a plain `podman images`.
 fn user_storage() -> PathBuf {
     let home = std::env::home_dir().expect("Failed to get home directory");
     PathBuf::from(home).join(".cache/azari/storage")
@@ -18,132 +16,69 @@ fn user_tmp_dir() -> PathBuf {
     let home = std::env::home_dir().expect("Failed to get home directory");
     let dir = PathBuf::from(home).join(".cache/azari/tmp");
 
-    // Ensure the directory exists before running any podman commands that use it.
+    // Ensure the directory exists
     std::fs::create_dir_all(&dir).expect("Failed to create user tmp directory");
     dir
 }
 
-/// Runs `podman build` in `build_dir` using an isolated `storage_root` so
-/// the built image is stored separately from the user's regular images.
+/// Builds the image according to the provided `Builder` and the receipt it was constructed from,
+/// tagging it as `<image>:latest` and `<image>:<version>` (when `version` is set).
 ///
-/// Always tags the image as `<image>:latest`. When `version` is `Some`, also
-/// tags it as `<image>:<version>`.
-pub(crate) fn podman_build(
-    build_dir: &Path,
-    image: &str,
-    version: Option<&str>,
-    name: Option<&str>,
-) -> Result<(), ReceiptError> {
+/// When `dry` is `true`, prints the `podman build` command that would be run without executing it,
+/// and adds it as a comment trailer to the Containerfile.
+pub(crate) fn podman_build(builder: &mut Builder, dry: bool) -> Result<(), ReceiptError> {
     // TODO: Check if podman is installed
+    let tmp_dir = user_tmp_dir();
+    let image = builder.image()?;
+    let build_dir = builder.build_dir();
+
+    std::fs::create_dir(build_dir.join("chunkah"))?;
 
     let mut cmd = std::process::Command::new("podman");
-    cmd.env("TMPDIR", user_tmp_dir())
+    cmd.env("TMPDIR", &tmp_dir)
         .arg("--root")
         .arg(user_storage())
         .arg("build")
         .arg("--pull=newer")
         .arg("--cap-add=all")
         .arg("--security-opt=label=type:container_runtime_t")
+        .arg("--skip-unused-stages=false")
+        .arg(format!(
+            "--volume={}/chunkah:/usr/lib/azari/chunkah",
+            build_dir.display()
+        ))
         .arg("--device=/dev/fuse")
         .arg("--network=host")
-        .arg("-f=Containerfile")
-        .arg("--label=azari.managed=true")
-        .arg(format!(
-            "--label=org.opencontainers.image.created={}",
-            chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
-        ))
-        .arg(format!(
-            "--label=org.opencontainers.image.title={}",
-            name.unwrap_or(image)
-        ))
-        .arg(format!(
-            "--label=org.opencontainers.image.version={}",
-            version.unwrap_or("latest")
-        ))
-        .arg(format!(
-            "--label=org.opencontainers.image.ref.name={}:{}",
-            image,
-            version.unwrap_or("latest")
-        ))
-        .arg(format!(
-            "--annotation=org.opencontainers.image.title={}",
-            name.unwrap_or(image)
-        ))
-        .arg(format!(
-            "--annotation=org.opencontainers.image.version={}",
-            version.unwrap_or("latest")
-        ))
-        .arg(format!(
-            "--annotation=org.opencontainers.image.ref.name={}:{}",
-            image,
-            version.unwrap_or("latest")
-        ))
-        .arg(format!("-t={image}:latest"));
+        .arg("--file=Containerfile")
+        .arg(format!("--tag={image}:latest"));
 
-    if let Some(ver) = version {
-        cmd.arg(format!("-t={image}:{ver}"));
+    for (key, val) in builder.oci_labels() {
+        cmd.arg(format!("--annotation={key}={val}"));
     }
 
-    println!("Running command:\n{:?}", cmd);
+    if let Some(ver) = builder.version() {
+        cmd.arg(format!("--tag={image}:{ver}"));
+    }
 
-    let status = cmd.arg(".").current_dir(build_dir).status()?;
+    cmd.arg(build_dir).current_dir(build_dir);
+
+    if dry {
+        println!("Build command:\n{cmd:?}");
+        builder.push(format!("\n# Build command:\n# {cmd:?}"));
+        builder.write_containerfile()?;
+        return Ok(());
+    }
+
+    let status = cmd.status()?;
 
     if !status.success() {
         return Err(ReceiptError::CommandFailed(
             "podman build".into(),
-            status.code().unwrap_or(-1),
+            status.code().unwrap_or(0),
         ));
     }
 
     Ok(())
-}
-
-/// Removes dangling (untagged, unreferenced) layers from the user's isolated
-/// storage (`~/.cache/azari/storage`) after a build.
-///
-/// When a tag moves to a freshly built image the previous image becomes
-/// dangling and is pruned here. Errors are silently ignored.
-pub(crate) fn podman_prune() {
-    let _ = std::process::Command::new("podman")
-        .arg("--root")
-        .arg(user_storage())
-        .arg("image")
-        .arg("prune")
-        .arg("--filter=until=720h") // 30 days
-        .arg("--force")
-        .status();
-}
-
-/// Removes images tagged with `azari.managed=true` from root's default
-/// containers-storage that are older than 30 days.
-pub(crate) fn podman_prune_old_root_images() {
-    let Ok(output) = std::process::Command::new("sudo")
-        .arg("podman")
-        .arg("images")
-        .arg("--filter=label=azari.managed=true")
-        .arg("--filter=until=720h") // 30 days
-        .arg("--quiet")
-        .output()
-    else {
-        return;
-    };
-
-    let ids: Vec<&str> = std::str::from_utf8(&output.stdout)
-        .unwrap_or("")
-        .lines()
-        .filter(|s| !s.is_empty())
-        .collect();
-
-    if ids.is_empty() {
-        return;
-    }
-
-    let _ = std::process::Command::new("sudo")
-        .arg("podman")
-        .arg("rmi")
-        .arg("--force")
-        .args(&ids)
-        .status();
 }
 
 /// Pushes `image` from the user's isolated storage to its remote registry.
@@ -163,7 +98,7 @@ pub(crate) fn podman_push(
         if !status.success() {
             return Err(ReceiptError::CommandFailed(
                 "podman push".into(),
-                status.code().unwrap_or(-1),
+                status.code().unwrap_or(0),
             ));
         }
 
@@ -207,13 +142,13 @@ pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError
     if !save_status.success() {
         return Err(ReceiptError::CommandFailed(
             "podman save".into(),
-            save_status.code().unwrap_or(-1),
+            save_status.code().unwrap_or(0),
         ));
     }
     if !load_status.success() {
         return Err(ReceiptError::CommandFailed(
             "podman load".into(),
-            load_status.code().unwrap_or(-1),
+            load_status.code().unwrap_or(0),
         ));
     }
 
@@ -232,7 +167,7 @@ pub(crate) fn fallocate(path: &Path, size: &str) -> Result<(), ReceiptError> {
     if !status.success() {
         return Err(ReceiptError::CommandFailed(
             "fallocate".into(),
-            status.code().unwrap_or(-1),
+            status.code().unwrap_or(0),
         ));
     }
 
@@ -308,7 +243,7 @@ pub(crate) fn podman_install(
     if !status.success() {
         return Err(ReceiptError::CommandFailed(
             "bootc install".into(),
-            status.code().unwrap_or(-1),
+            status.code().unwrap_or(0),
         ));
     }
 
@@ -316,10 +251,6 @@ pub(crate) fn podman_install(
 }
 
 /// Switch the running bootc image to `image:version` via sudo.
-///
-/// When `local` is `true`, passes `--transport=containers-storage` so bootc
-/// reads the image from root's containers-storage instead of pulling it from
-/// a remote registry.
 pub(crate) fn bootc_switch(image: &str, version: &str, local: bool) -> Result<(), ReceiptError> {
     let mut cmd = std::process::Command::new("sudo");
     cmd.arg("bootc").arg("switch");
@@ -334,7 +265,7 @@ pub(crate) fn bootc_switch(image: &str, version: &str, local: bool) -> Result<()
     if !status.success() {
         return Err(ReceiptError::CommandFailed(
             "bootc switch".into(),
-            status.code().unwrap_or(-1),
+            status.code().unwrap_or(0),
         ));
     }
 
@@ -342,8 +273,6 @@ pub(crate) fn bootc_switch(image: &str, version: &str, local: bool) -> Result<()
 }
 
 /// Run `bootc upgrade` on the host via sudo.
-///
-/// When `version` is set, it is passed as `--tag <version>`.
 pub(crate) fn bootc_upgrade(version: Option<&str>) -> Result<(), ReceiptError> {
     let mut cmd = std::process::Command::new("sudo");
     cmd.arg("bootc").arg("upgrade");
@@ -356,7 +285,7 @@ pub(crate) fn bootc_upgrade(version: Option<&str>) -> Result<(), ReceiptError> {
     if !status.success() {
         return Err(ReceiptError::CommandFailed(
             "bootc upgrade".into(),
-            status.code().unwrap_or(-1),
+            status.code().unwrap_or(0),
         ));
     }
 

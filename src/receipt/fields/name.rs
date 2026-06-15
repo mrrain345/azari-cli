@@ -40,18 +40,6 @@ impl Build for NameField {
                 None => name.clone(),
             };
 
-            builder.push(format!(
-                "LABEL org.opencontainers.image.title=\"{}\"",
-                escape(&name)
-            ));
-
-            if let Some(v) = &version {
-                builder.push(format!(
-                    "LABEL org.opencontainers.image.version=\"{}\"",
-                    escape(v)
-                ));
-            }
-
             builder.push(os_release_sed("NAME", &name));
             if let Some(v) = &version {
                 builder.push(os_release_sed("VERSION", v));

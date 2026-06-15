@@ -37,7 +37,8 @@ impl Build for FromField {
         let image = self
             .value()?
             .unwrap_or_else(|| distro.default_image().to_owned());
-        builder.push(format!("FROM {image}"));
+        builder.set_base_image(image.clone());
+        builder.push(format!("FROM {image} as builder"));
         Ok(())
     }
 }

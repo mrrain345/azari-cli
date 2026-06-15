@@ -2,7 +2,7 @@ use std::path::Path;
 
 use clap::Args;
 
-use crate::builder::command::{fallocate, podman_install, podman_prune_old_root_images};
+use crate::builder::command::{fallocate, podman_install};
 use crate::receipt::{Receipt, ReceiptError, ReceiptField};
 
 use super::Cli;
@@ -26,7 +26,7 @@ pub struct InstallArgs {
     #[arg(long)]
     pub wipe: bool,
 
-    /// Image size when installing to a file (e.g. `20G`). Defaults to `16G`.
+    /// Image size when installing to a file. Defaults to `16G`.
     #[arg(long, value_name = "SIZE", default_value = "16G")]
     pub size: String,
 }
@@ -72,17 +72,6 @@ impl InstallArgs {
             );
         }
 
-        let install_result = podman_install(&image, version, &self.device, self.wipe, via_loopback);
-
-        if install_result.is_ok() {
-            println!("Pruning old images from root storage…");
-
-            // Remove azari-managed images from root storage that are older than 30 days
-            podman_prune_old_root_images();
-
-            println!("Done.");
-        }
-
-        install_result
+        podman_install(&image, version, &self.device, self.wipe, via_loopback)
     }
 }

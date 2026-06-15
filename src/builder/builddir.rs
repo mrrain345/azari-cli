@@ -53,8 +53,9 @@ impl BuildDir {
         } else {
             std::fs::create_dir_all(&path)?;
         }
+
         Ok(BuildDir {
-            inner: BuildDirInner::Persistent(path),
+            inner: BuildDirInner::Persistent(path.canonicalize()?),
         })
     }
 
