@@ -4,18 +4,25 @@ use tempfile::TempDir;
 
 use crate::receipt::ReceiptError;
 
+/// Returns the XDG cache base, falling back to `~/.cache`.
+fn xdg_cache_home() -> PathBuf {
+    if let Ok(val) = std::env::var("XDG_CACHE_HOME") {
+        if !val.is_empty() {
+            return PathBuf::from(val);
+        }
+    }
+    let home = std::env::home_dir().expect("Failed to get home directory");
+    PathBuf::from(home).join(".cache")
+}
+
 /// Returns the isolated storage root used for user-side builds.
 pub fn user_storage() -> PathBuf {
-    let home = std::env::home_dir().expect("Failed to get home directory");
-    PathBuf::from(home).join(".cache/azari/storage")
+    xdg_cache_home().join("azari/storage")
 }
 
 /// Returns the temporary directory used for user-side builds.
 pub fn user_tmp_dir() -> PathBuf {
-    let home = std::env::home_dir().expect("Failed to get home directory");
-    let dir = PathBuf::from(home).join(".cache/azari/tmp");
-
-    // Ensure the directory exists
+    let dir = xdg_cache_home().join("azari/tmp");
     std::fs::create_dir_all(&dir).expect("Failed to create user tmp directory");
     dir
 }
