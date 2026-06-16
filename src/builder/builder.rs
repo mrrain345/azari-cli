@@ -191,11 +191,11 @@ impl Builder {
         let mut labels = self
             .oci_labels()
             .iter()
-            .map(|(k, v)| format!("{k}=\"{v}\""))
+            .map(|(k, v)| format!(r#""{k}"="{v}""#))
             .collect::<Vec<_>>();
 
-        labels.push(r#"containers.bootc"="1""#.into());
-        labels.push(r#"azari.managed"="true""#.into());
+        labels.push(r#""containers.bootc"="1""#.into());
+        labels.push(r#""azari.managed"="true""#.into());
 
         self.push(format!("LABEL {}", labels.join(" \\\n    "),));
     }
