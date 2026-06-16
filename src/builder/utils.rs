@@ -25,17 +25,20 @@ pub fn user_tmp_dir() -> PathBuf {
 /// If `build_dir` is provided, creates a persistent directory at the specified path.
 /// Otherwise, creates a temporary directory that will be automatically deleted when dropped.
 pub fn make_build_dir(build_dir: Option<std::path::PathBuf>) -> Result<TempDir, ReceiptError> {
-    let no_cleanup = build_dir.is_some();
+    let cleanup = build_dir.is_none();
     let path = build_dir.unwrap_or_else(user_tmp_dir);
 
     std::fs::create_dir_all(&path)?;
 
-    Ok(tempfile::Builder::new()
+    let dir = tempfile::Builder::new()
         .prefix("azari-build-")
-        .disable_cleanup(no_cleanup)
-        .tempdir_in(path)?)
+        .disable_cleanup(!cleanup)
+        .tempdir_in(path)?;
+
+    Ok(dir)
 }
 
+/// Gets the current timestamp as an RFC3339 string, for use in OCI labels.
 pub fn get_timestamp_str() -> String {
     chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }

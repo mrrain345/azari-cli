@@ -1,9 +1,11 @@
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use clap::Args;
 
 use crate::builder::Builder;
 use crate::builder::command::{podman_build, podman_push};
+use crate::builder::utils::user_tmp_dir;
 use crate::receipt::{Receipt, ReceiptError};
 
 use super::Cli;
@@ -44,6 +46,8 @@ impl BuildArgs {
     pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
         // TODO: Remove the need for `cli`, consume self
 
+        handle_tmp_cleanup();
+
         let path = cli.receipt_path()?;
         let receipt = Receipt::from_file(&path)?;
 
@@ -66,4 +70,41 @@ impl BuildArgs {
 
         Ok(())
     }
+}
+
+/// Clears the user temporary directory of all files and subdirectories.
+fn clear_tmp_dir() -> std::io::Result<()> {
+    let tmp_dir = user_tmp_dir();
+
+    for entry in std::fs::read_dir(&tmp_dir)? {
+        let path = entry?.path();
+        set_permissions_recursively(&path)?;
+        std::fs::remove_dir_all(path)?;
+    }
+
+    Ok(())
+}
+
+/// Recursively sets permissions to 700 for the given path and all its children.
+fn set_permissions_recursively(path: &std::path::Path) -> std::io::Result<()> {
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700))?;
+    if path.is_dir() {
+        for entry in std::fs::read_dir(path)? {
+            set_permissions_recursively(&entry?.path())?;
+        }
+    }
+    Ok(())
+}
+
+/// Sets up a `Ctrl-C` handler to ensure the temporary build directory is cleaned up on interrupt.
+fn handle_tmp_cleanup() {
+    ctrlc::set_handler(|| {
+        clear_tmp_dir().unwrap_or_else(|_| {
+            let path = user_tmp_dir();
+            let path = path.display();
+            eprintln!("Failed to clear temporary build directory: \"{path}\"");
+        });
+        std::process::exit(130);
+    })
+    .expect("Error setting Ctrl-C handler");
 }
