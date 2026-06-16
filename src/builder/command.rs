@@ -249,3 +249,36 @@ pub(crate) fn bootc_upgrade(version: Option<&str>) -> Result<(), ReceiptError> {
 
     execute_command(cmd, "bootc upgrade")
 }
+
+/// Run `bootc usr-overlay` on the host via sudo, making /usr writable.
+pub(crate) fn bootc_unlock() -> Result<(), ReceiptError> {
+    require_command("sudo")?;
+    require_command("bootc")?;
+
+    let mut cmd = std::process::Command::new("sudo");
+    cmd.arg("bootc").arg("usr-overlay");
+
+    execute_command(cmd, "bootc usr-overlay")
+}
+
+/// Run `bootc status` on the host via sudo.
+pub(crate) fn bootc_status() -> Result<(), ReceiptError> {
+    require_command("sudo")?;
+    require_command("bootc")?;
+
+    let mut cmd = std::process::Command::new("sudo");
+    cmd.arg("bootc").arg("status");
+
+    execute_command(cmd, "bootc status")
+}
+
+/// Run `bootc rollback` on the host via sudo.
+pub(crate) fn bootc_rollback() -> Result<(), ReceiptError> {
+    require_command("sudo")?;
+    require_command("bootc")?;
+
+    let mut cmd = std::process::Command::new("sudo");
+    cmd.arg("bootc").arg("rollback");
+
+    execute_command(cmd, "bootc rollback")
+}

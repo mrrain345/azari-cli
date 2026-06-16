@@ -7,13 +7,19 @@ use crate::receipt::ReceiptError;
 pub mod build;
 pub mod install;
 pub mod push;
+pub mod rollback;
+pub mod status;
 pub mod switch;
+pub mod unlock;
 pub mod upgrade;
 
 use build::BuildArgs;
 use install::InstallArgs;
 use push::PushArgs;
+use rollback::RollbackArgs;
+use status::StatusArgs;
 use switch::SwitchArgs;
+use unlock::UnlockArgs;
 use upgrade::UpgradeArgs;
 
 /// Azari CLI
@@ -50,16 +56,25 @@ impl Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Show the status of the booted system
+    Status(StatusArgs),
+    /// Make /usr writable via a transient overlay (all changes will be lost on reboot)
+    Unlock(UnlockArgs),
+
+    /// Upgrade the currently installed system
+    Upgrade(UpgradeArgs),
+    /// Switch the specific version
+    Switch(SwitchArgs),
+    /// Rollback to the previous deployment
+    Rollback(RollbackArgs),
+
     /// Build the receipt
     Build(BuildArgs),
     /// Push a previously built image to its registry
     Push(PushArgs),
+
     /// Install the latest image onto a block device
     Install(InstallArgs),
-    /// Switch the bootc image to a specific version
-    Switch(SwitchArgs),
-    /// Upgrade the currently installed bootc system
-    Upgrade(UpgradeArgs),
 }
 
 impl Command {
@@ -70,6 +85,9 @@ impl Command {
             Command::Install(args) => args.run(cli),
             Command::Switch(args) => args.run(cli),
             Command::Upgrade(args) => args.run(cli),
+            Command::Unlock(args) => args.run(cli),
+            Command::Status(args) => args.run(cli),
+            Command::Rollback(args) => args.run(cli),
         }
     }
 }
