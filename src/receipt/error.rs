@@ -23,9 +23,6 @@ pub enum ReceiptError {
     #[error("Distro not specified. Add a \"distro\" field to your receipt.")]
     DistroNotSpecified,
 
-    #[error("Build directory is not empty: {0}")]
-    BuildDirNotEmpty(std::path::PathBuf),
-
     #[error("Image name not specified. Add an \"image\" field to your receipt.")]
     ImageNotSpecified,
 

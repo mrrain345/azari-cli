@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use clap::Args;
 
+use crate::builder::Builder;
 use crate::builder::command::{podman_build, podman_push};
-use crate::builder::{BuildDir, Builder};
 use crate::receipt::{Receipt, ReceiptError};
 
 use super::Cli;
@@ -27,7 +27,7 @@ pub struct BuildArgs {
     #[arg(long)]
     pub skip_rechunk: bool,
 
-    /// Path to the build directory.
+    /// Create and keep a build directory in the specified path.
     #[arg(short = 'b', long, value_name = "PATH")]
     pub build_dir: Option<PathBuf>,
 
@@ -41,13 +41,10 @@ impl BuildArgs {
         let path = cli.receipt_path()?;
         let receipt = Receipt::from_file(&path)?;
 
-        let build_dir = match &self.build_dir {
-            Some(path) => BuildDir::persistent(path.clone())?,
-            None => BuildDir::temp()?,
-        };
+        let mut builder =
+            Builder::from_receipt(receipt, self.version.clone(), self.build_dir.clone())?;
 
-        let mut builder = Builder::from_receipt(receipt, build_dir, self.version.clone())?;
-
+        // Override the image name if specified via CLI flag.
         if let Some(image) = &self.image {
             builder.set_image(image.clone());
         }

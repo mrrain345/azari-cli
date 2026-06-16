@@ -1,7 +1,8 @@
+use tempfile::TempDir;
+
+use crate::builder::utils::{get_timestamp_str, make_build_dir};
 use crate::distro::Distro;
 use crate::receipt::{Receipt, ReceiptError};
-
-use super::BuildDir;
 
 /// Trait for building a Containerfile from a receipt field.
 pub trait Build {
@@ -18,7 +19,7 @@ pub struct Builder {
     base_image: Option<String>,
     created: String,
     lines: Vec<String>,
-    build_dir: BuildDir,
+    build_dir: TempDir,
 }
 
 /// Maximum number of layers to allow when rechunking with chunkah.
@@ -28,8 +29,8 @@ impl Builder {
     /// Builds containerfile lines from a receipt.
     pub fn from_receipt(
         receipt: Receipt,
-        build_dir: BuildDir,
         version: Option<String>,
+        build_dir: Option<std::path::PathBuf>,
     ) -> Result<Self, ReceiptError> {
         let mut builder = Builder {
             distro: None,
@@ -37,9 +38,9 @@ impl Builder {
             version,
             name: None,
             base_image: None,
-            created: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            created: get_timestamp_str(),
             lines: Vec::new(),
-            build_dir,
+            build_dir: make_build_dir(build_dir)?,
         };
 
         // `distro` must be built first — it populates `builder.distro`,
