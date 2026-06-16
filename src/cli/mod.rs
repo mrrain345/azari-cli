@@ -5,6 +5,8 @@ use clap::{Parser, Subcommand};
 use crate::receipt::ReceiptError;
 
 pub mod build;
+pub mod clear;
+pub mod images;
 pub mod install;
 pub mod push;
 pub mod rollback;
@@ -14,6 +16,8 @@ pub mod unlock;
 pub mod upgrade;
 
 use build::BuildArgs;
+use clear::ClearArgs;
+use images::ImagesArgs;
 use install::InstallArgs;
 use push::PushArgs;
 use rollback::RollbackArgs;
@@ -75,19 +79,25 @@ pub enum Command {
 
     /// Install the latest image onto a block device
     Install(InstallArgs),
+    /// List all locally stored images
+    Images(ImagesArgs),
+    /// Prune all locally stored images except the current image:latest
+    Clear(ClearArgs),
 }
 
 impl Command {
     pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
         match self {
+            Command::Status(args) => args.run(cli),
+            Command::Unlock(args) => args.run(cli),
+            Command::Upgrade(args) => args.run(cli),
+            Command::Switch(args) => args.run(cli),
+            Command::Rollback(args) => args.run(cli),
             Command::Build(args) => args.run(cli),
             Command::Push(args) => args.run(cli),
             Command::Install(args) => args.run(cli),
-            Command::Switch(args) => args.run(cli),
-            Command::Upgrade(args) => args.run(cli),
-            Command::Unlock(args) => args.run(cli),
-            Command::Status(args) => args.run(cli),
-            Command::Rollback(args) => args.run(cli),
+            Command::Images(args) => args.run(cli),
+            Command::Clear(args) => args.run(cli),
         }
     }
 }

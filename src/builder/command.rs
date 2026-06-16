@@ -250,6 +250,32 @@ pub(crate) fn bootc_upgrade(version: Option<&str>) -> Result<(), ReceiptError> {
     execute_command(cmd, "bootc upgrade")
 }
 
+/// List images in the user's isolated storage.
+pub(crate) fn podman_images() -> Result<(), ReceiptError> {
+    require_command("podman")?;
+
+    let mut cmd = std::process::Command::new("podman");
+    cmd.arg("--root").arg(user_storage()).arg("images");
+
+    execute_command(cmd, "podman images")
+}
+
+/// Prune all images from the user's isolated storage except `<image>:latest`.
+pub(crate) fn podman_clear(image: &str) -> Result<(), ReceiptError> {
+    require_command("podman")?;
+
+    let mut cmd = std::process::Command::new("podman");
+    cmd.arg("--root")
+        .arg(user_storage())
+        .arg("image")
+        .arg("prune")
+        .arg("--all")
+        .arg("--force")
+        .arg(format!("--filter=reference!={image}:latest"));
+
+    execute_command(cmd, "podman image prune")
+}
+
 /// Run `bootc usr-overlay` on the host via sudo, making /usr writable.
 pub(crate) fn bootc_unlock() -> Result<(), ReceiptError> {
     require_command("sudo")?;
