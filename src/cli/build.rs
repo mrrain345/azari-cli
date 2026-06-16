@@ -27,8 +27,12 @@ pub struct BuildArgs {
     #[arg(long)]
     pub skip_rechunk: bool,
 
+    /// Do not use cached layers when building the image.
+    #[arg(long)]
+    pub no_cache: bool,
+
     /// Create and keep a build directory in the specified path.
-    #[arg(short = 'b', long, value_name = "PATH")]
+    #[arg(long, value_name = "PATH")]
     pub build_dir: Option<PathBuf>,
 
     /// Generate the Containerfile but skip running `podman build`.
@@ -38,6 +42,8 @@ pub struct BuildArgs {
 
 impl BuildArgs {
     pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
+        // TODO: Remove the need for `cli`, consume self
+
         let path = cli.receipt_path()?;
         let receipt = Receipt::from_file(&path)?;
 
@@ -52,7 +58,7 @@ impl BuildArgs {
         builder.add_trailer(!self.skip_rechunk);
         builder.write_containerfile()?;
 
-        podman_build(&mut builder, self.dry)?;
+        podman_build(&mut builder, self.dry, self.no_cache)?;
 
         if self.push && !self.dry {
             podman_push(builder.image()?, builder.version(), true)?;

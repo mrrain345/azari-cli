@@ -11,7 +11,7 @@ use super::Builder;
 ///
 /// When `dry` is `true`, prints the `podman build` command that would be run without executing it,
 /// and adds it as a comment trailer to the Containerfile.
-pub(crate) fn podman_build(builder: &mut Builder, dry: bool) -> Result<(), ReceiptError> {
+pub(crate) fn podman_build(builder: &mut Builder, dry: bool, no_cache: bool) -> Result<(), ReceiptError> {
     require_command("podman")?;
     let tmp_dir = user_tmp_dir();
     let image = builder.image()?;
@@ -36,6 +36,10 @@ pub(crate) fn podman_build(builder: &mut Builder, dry: bool) -> Result<(), Recei
         .arg("--network=host")
         .arg("--file=Containerfile")
         .arg(format!("--tag={image}:latest"));
+
+    if no_cache {
+        cmd.arg("--no-cache");
+    }
 
     for (key, val) in builder.oci_labels() {
         cmd.arg(format!("--annotation={key}={val}"));
