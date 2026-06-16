@@ -11,7 +11,11 @@ use super::Builder;
 ///
 /// When `dry` is `true`, prints the `podman build` command that would be run without executing it,
 /// and adds it as a comment trailer to the Containerfile.
-pub(crate) fn podman_build(builder: &mut Builder, dry: bool, no_cache: bool) -> Result<(), ReceiptError> {
+pub(crate) fn podman_build(
+    builder: &mut Builder,
+    dry: bool,
+    no_cache: bool,
+) -> Result<(), ReceiptError> {
     require_command("podman")?;
     let tmp_dir = user_tmp_dir();
     let image = builder.image()?;
@@ -261,19 +265,77 @@ pub(crate) fn podman_images() -> Result<(), ReceiptError> {
 }
 
 /// Prune all images from the user's isolated storage except `<image>:latest`.
-pub(crate) fn podman_clear(image: &str) -> Result<(), ReceiptError> {
+pub(crate) fn podman_clear(image: Option<&str>) -> Result<(), ReceiptError> {
     require_command("podman")?;
 
+    // Prune all unused images and volumes
     let mut cmd = std::process::Command::new("podman");
     cmd.arg("--root")
         .arg(user_storage())
         .arg("image")
         .arg("prune")
         .arg("--all")
-        .arg("--force")
-        .arg(format!("--filter=reference!={image}:latest"));
+        .arg("--force");
 
-    execute_command(cmd, "podman image prune")
+    // Exclude the current image:latest from pruning if specified
+    if let Some(image) = image {
+        cmd.arg(format!("--filter=reference!={image}:latest"));
+    }
+
+    execute_command(cmd, "podman image prune")?;
+
+    // Remove all images except the current image:latest if specified
+    let mut rmi_cmd = std::process::Command::new("podman");
+    rmi_cmd
+        .arg("--root")
+        .arg(user_storage())
+        .arg("image")
+        .arg("rm")
+        .arg("--force");
+
+    let filter = image.map(|image| format!("reference!={image}:latest"));
+    let ids = podman_get_image_ids(filter.as_deref())?;
+
+    if ids.is_empty() {
+        return Ok(());
+    }
+
+    rmi_cmd.args(ids);
+    execute_command(rmi_cmd, "podman image rm")
+}
+
+pub(crate) fn podman_get_image_ids(filter: Option<&str>) -> Result<Vec<String>, ReceiptError> {
+    require_command("podman")?;
+
+    let mut cmd = std::process::Command::new("podman");
+    cmd.arg("--root")
+        .arg(user_storage())
+        .arg("images")
+        .arg("--quiet");
+
+    if let Some(filter) = filter {
+        cmd.arg(format!("--filter={}", filter));
+    }
+
+    let output = cmd.output().map_err(|e| {
+        ReceiptError::CommandFailed("podman images".into(), e.raw_os_error().unwrap_or(0))
+    })?;
+
+    if !output.status.success() {
+        return Err(ReceiptError::CommandFailed(
+            "podman images".into(),
+            output.status.code().unwrap_or(0),
+        ));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let ids: Vec<String> = stdout
+        .lines()
+        .filter(|l| !l.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+
+    Ok(ids)
 }
 
 /// Run `bootc usr-overlay` on the host via sudo, making /usr writable.

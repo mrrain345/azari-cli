@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{os::unix::fs::PermissionsExt, path::PathBuf};
 
 use tempfile::TempDir;
 
@@ -43,6 +43,45 @@ pub fn make_build_dir(build_dir: Option<std::path::PathBuf>) -> Result<TempDir, 
         .tempdir_in(path)?;
 
     Ok(dir)
+}
+
+/// Clears the user temporary directory of all files and subdirectories.
+pub fn clear_tmp_dir() -> std::io::Result<()> {
+    let tmp_dir = user_tmp_dir();
+
+    for entry in std::fs::read_dir(&tmp_dir)? {
+        let path = entry?.path();
+        set_permissions_recursively(&path)?;
+        std::fs::remove_dir_all(path)?;
+    }
+
+    Ok(())
+}
+
+/// Delete the entire azari cache directory, fixing permissions first.
+pub fn remove_cache_dir() -> Result<(), ReceiptError> {
+    let cache_dir = xdg_cache_home().join("azari");
+
+    if cache_dir.exists() {
+        set_permissions_recursively(&cache_dir)?;
+        std::fs::remove_dir_all(&cache_dir)?;
+    }
+
+    Ok(())
+}
+
+/// Recursively sets permissions to 700 for the given path and all its children.
+fn set_permissions_recursively(path: &std::path::Path) -> std::io::Result<()> {
+    if path.is_symlink() {
+        return Ok(()); // Skip symlinks to avoid affecting files outside the cache directory
+    }
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700))?;
+    if path.is_dir() {
+        for entry in std::fs::read_dir(path)? {
+            set_permissions_recursively(&entry?.path())?;
+        }
+    }
+    Ok(())
 }
 
 /// Gets the current timestamp as an RFC3339 string, for use in OCI labels.
