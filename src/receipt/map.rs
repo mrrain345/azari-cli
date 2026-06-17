@@ -1,6 +1,5 @@
 use std::fmt;
 use std::marker::PhantomData;
-use std::path::PathBuf;
 
 use serde::{
     de::{Deserialize, Deserializer, MapAccess, Visitor},
@@ -9,7 +8,6 @@ use serde::{
 
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
-use crate::receipt::path::current_path;
 
 /// A map field in a receipt file.
 ///
@@ -19,14 +17,12 @@ use crate::receipt::path::current_path;
 /// across all sources.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReceiptMap<K = String, V = String> {
-    sources: Vec<PathBuf>,
     values: Vec<Vec<(K, V)>>,
 }
 
 impl<K, V> ReceiptMap<K, V> {
-    pub fn new(path: PathBuf, values: Vec<(K, V)>) -> Self {
+    pub fn new(values: Vec<(K, V)>) -> Self {
         Self {
-            sources: vec![path],
             values: vec![values],
         }
     }
@@ -52,23 +48,16 @@ where
         Ok(flat)
     }
 
-    fn sources(&self) -> &[PathBuf] {
-        &self.sources
-    }
-
     fn merge(self, other: Self) -> Self {
-        let mut sources = self.sources;
         let mut values = self.values;
-        sources.extend(other.sources);
         values.extend(other.values);
-        Self { sources, values }
+        Self { values }
     }
 }
 
 impl<K, V> Default for ReceiptMap<K, V> {
     fn default() -> Self {
         Self {
-            sources: Vec::new(),
             values: Vec::new(),
         }
     }
@@ -138,10 +127,9 @@ where
         D: Deserializer<'de>,
     {
         let opt = deserializer.deserialize_option(OptionMapVisitor(PhantomData))?;
-        let path = current_path().expect("Current source path is not set");
 
         Ok(match opt {
-            Some(values) => ReceiptMap::new(path, values),
+            Some(values) => ReceiptMap::new(values),
             None => ReceiptMap::default(),
         })
     }
@@ -167,16 +155,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use super::ReceiptMap;
     use crate::receipt::error::ReceiptError;
     use crate::receipt::field::ReceiptField;
-    use crate::receipt::path::SourcePathGuard;
-
-    fn p(s: &str) -> PathBuf {
-        PathBuf::from(s)
-    }
 
     fn pairs(slice: &[(&str, &str)]) -> Vec<(String, String)> {
         slice
@@ -190,13 +171,12 @@ mod tests {
     #[test]
     fn default_value_is_empty() {
         let map = ReceiptMap::<String, String>::default();
-        assert!(map.sources().is_empty());
         assert_eq!(map.value().unwrap(), vec![]);
     }
 
     #[test]
     fn value_returns_pairs_in_insertion_order() {
-        let map = ReceiptMap::new(p("/a.yaml"), pairs(&[("b", "2"), ("a", "1"), ("c", "3")]));
+        let map = ReceiptMap::new(pairs(&[("b", "2"), ("a", "1"), ("c", "3")]));
         assert_eq!(
             map.value().unwrap(),
             pairs(&[("b", "2"), ("a", "1"), ("c", "3")])
@@ -205,7 +185,7 @@ mod tests {
 
     #[test]
     fn duplicate_key_within_single_source_is_conflict() {
-        let map = ReceiptMap::new(p("/a.yaml"), pairs(&[("x", "1"), ("x", "2")]));
+        let map = ReceiptMap::new(pairs(&[("x", "1"), ("x", "2")]));
         assert!(matches!(map.value(), Err(ReceiptError::FieldConflict)));
     }
 
@@ -214,8 +194,8 @@ mod tests {
     #[test]
     fn merge_unique_keys_preserves_source_order() {
         // "imported has precedence" pattern: imported.merge(current)
-        let imported = ReceiptMap::new(p("/base.yaml"), pairs(&[("a", "base"), ("b", "base")]));
-        let current = ReceiptMap::new(p("/root.yaml"), pairs(&[("c", "root")]));
+        let imported = ReceiptMap::new(pairs(&[("a", "base"), ("b", "base")]));
+        let current = ReceiptMap::new(pairs(&[("c", "root")]));
         let merged = imported.merge(current);
         assert_eq!(
             merged.value().unwrap(),
@@ -225,23 +205,15 @@ mod tests {
 
     #[test]
     fn merge_duplicate_key_across_sources_is_conflict() {
-        let imported = ReceiptMap::new(p("/base.yaml"), pairs(&[("shared", "from-base")]));
-        let current = ReceiptMap::new(p("/root.yaml"), pairs(&[("shared", "from-root")]));
+        let imported = ReceiptMap::new(pairs(&[("shared", "from-base")]));
+        let current = ReceiptMap::new(pairs(&[("shared", "from-root")]));
         let merged = imported.merge(current);
         assert!(matches!(merged.value(), Err(ReceiptError::FieldConflict)));
     }
 
     #[test]
-    fn merge_tracks_all_sources() {
-        let m1 = ReceiptMap::new(p("/a.yaml"), pairs(&[("k1", "v1")]));
-        let m2 = ReceiptMap::new(p("/b.yaml"), pairs(&[("k2", "v2")]));
-        let merged = m1.merge(m2);
-        assert_eq!(merged.sources(), &[p("/a.yaml"), p("/b.yaml")]);
-    }
-
-    #[test]
     fn merge_with_default_is_identity() {
-        let map = ReceiptMap::new(p("/a.yaml"), pairs(&[("k", "v")]));
+        let map = ReceiptMap::new(pairs(&[("k", "v")]));
         let merged = ReceiptMap::default().merge(map.clone());
         assert_eq!(merged.value().unwrap(), map.value().unwrap());
     }
@@ -250,15 +222,12 @@ mod tests {
 
     #[test]
     fn deserialize_null_yields_default() {
-        let _guard = SourcePathGuard::push_path(p("/test.yaml"));
         let map: ReceiptMap = serde_saphyr::from_str("~").unwrap();
-        assert!(map.sources().is_empty());
         assert_eq!(map.value().unwrap(), vec![]);
     }
 
     #[test]
     fn deserialize_map_yields_ordered_pairs() {
-        let _guard = SourcePathGuard::push_path(p("/test.yaml"));
         let map: ReceiptMap = serde_saphyr::from_str("b: '2'\na: '1'\nc: '3'").unwrap();
         assert_eq!(
             map.value().unwrap(),
@@ -266,21 +235,12 @@ mod tests {
         );
     }
 
-    #[test]
-    fn deserialize_sets_source_path() {
-        let _guard = SourcePathGuard::push_path(p("/receipt.yaml"));
-        let map: ReceiptMap = serde_saphyr::from_str("key: val").unwrap();
-        assert_eq!(map.sources().len(), 1);
-    }
-
     // --- Serialize ---
 
     #[test]
     fn serialize_roundtrip_preserves_order() {
-        let _guard = SourcePathGuard::push_path(p("/test.yaml"));
         let original: ReceiptMap = serde_saphyr::from_str("b: two\na: one").unwrap();
         let yaml = serde_saphyr::to_string(&original).unwrap();
-        let _guard2 = SourcePathGuard::push_path(p("/test.yaml"));
         let roundtrip: ReceiptMap = serde_saphyr::from_str(&yaml).unwrap();
         assert_eq!(original.value().unwrap(), roundtrip.value().unwrap());
     }

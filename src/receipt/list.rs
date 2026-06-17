@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use serde::{
     de::{Deserialize, Deserializer},
     ser::{Serialize, Serializer},
@@ -7,7 +5,6 @@ use serde::{
 
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
-use crate::receipt::path::current_path;
 
 /// A list field in a receipt file.
 ///
@@ -15,15 +12,13 @@ use crate::receipt::path::current_path;
 /// Multiple sources defining this field is not a conflict.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReceiptList<T = String> {
-    sources: Vec<PathBuf>,
     values: Vec<Vec<T>>,
 }
 
 impl<T> ReceiptList<T> {
-    /// Creates a list field from a known source path.
-    pub fn new(path: PathBuf, values: Vec<T>) -> Self {
+    /// Creates a list field from a set of values.
+    pub fn new(values: Vec<T>) -> Self {
         Self {
-            sources: vec![path],
             values: vec![values],
         }
     }
@@ -37,25 +32,16 @@ impl<T> ReceiptField for ReceiptList<T> {
         Ok(self.values.into_iter().flatten().collect())
     }
 
-    fn sources(&self) -> &[PathBuf] {
-        &self.sources
-    }
-
     fn merge(self, other: Self) -> Self {
-        let mut sources = self.sources;
         let mut values = self.values;
-        sources.extend(other.sources);
         values.extend(other.values);
-        Self { sources, values }
+        Self { values }
     }
 }
 
 impl<T> Default for ReceiptList<T> {
     fn default() -> Self {
-        Self {
-            sources: Vec::new(),
-            values: Vec::new(),
-        }
+        Self { values: Vec::new() }
     }
 }
 
@@ -68,10 +54,9 @@ where
         D: Deserializer<'de>,
     {
         let opt = Option::<Vec<T>>::deserialize(deserializer)?;
-        let path = current_path().expect("Current source path is not set");
 
         Ok(match opt {
-            Some(values) => ReceiptList::new(path, values),
+            Some(values) => ReceiptList::new(values),
             None => ReceiptList::default(),
         })
     }

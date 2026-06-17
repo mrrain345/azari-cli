@@ -86,10 +86,6 @@ impl ReceiptField for FilesField {
         self.0.value()
     }
 
-    fn sources(&self) -> &[PathBuf] {
-        self.0.sources()
-    }
-
     fn merge(self, other: Self) -> Self {
         Self(self.0.merge(other.0))
     }
@@ -413,7 +409,6 @@ mod tests {
     #[test]
     fn default_is_empty() {
         let field = FilesField::default();
-        assert!(field.sources().is_empty());
         assert_eq!(field.value().unwrap().len(), 0);
     }
 

@@ -23,10 +23,6 @@ impl ReceiptField for ImportField {
         self.0.value()
     }
 
-    fn sources(&self) -> &[PathBuf] {
-        self.0.sources()
-    }
-
     fn merge(self, other: Self) -> Self {
         Self(self.0.merge(other.0))
     }

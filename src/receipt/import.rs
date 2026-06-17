@@ -62,11 +62,6 @@ impl ReceiptField for ReceiptImport {
         Ok(self.pending)
     }
 
-    /// Loaded imported module paths.
-    fn sources(&self) -> &[PathBuf] {
-        &self.loaded
-    }
-
     fn merge(self, other: Self) -> Self {
         let mut pending = self.pending;
         pending.extend(other.pending);

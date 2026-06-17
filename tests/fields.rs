@@ -53,31 +53,3 @@ fn missing_file_returns_io_error() {
     );
 }
 
-#[test]
-fn full_receipt_source_paths_are_set() {
-    let path = receipts_dir().join("fields-full.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-
-    let expected_path = path.canonicalize().ok();
-
-    let from_path = receipt
-        .from
-        .sources()
-        .first()
-        .map(|p| p.canonicalize().ok());
-    assert_eq!(from_path, Some(expected_path.clone()));
-
-    let name_path = receipt
-        .name
-        .sources()
-        .first()
-        .map(|p| p.canonicalize().ok());
-    assert_eq!(name_path, Some(expected_path.clone()));
-
-    let hostname_path = receipt
-        .hostname
-        .sources()
-        .first()
-        .map(|p| p.canonicalize().ok());
-    assert_eq!(hostname_path, Some(expected_path));
-}

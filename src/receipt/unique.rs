@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use serde::{
     de::{Deserialize, Deserializer},
     ser::{Serialize, Serializer},
@@ -7,20 +5,17 @@ use serde::{
 
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
-use crate::receipt::path::current_path;
 
 /// A receipt field where only one source may define a value.
 /// Multiple sources defining it results in a [`ReceiptError::FieldConflict`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReceiptUnique<T = String> {
-    sources: Vec<PathBuf>,
     values: Vec<T>,
 }
 
 impl<T> ReceiptUnique<T> {
-    pub fn new(path: PathBuf, value: T) -> Self {
+    pub fn new(value: T) -> Self {
         Self {
-            sources: vec![path],
             values: vec![value],
         }
     }
@@ -38,23 +33,16 @@ impl<T> ReceiptField for ReceiptUnique<T> {
         Ok(self.values.into_iter().next())
     }
 
-    fn sources(&self) -> &[PathBuf] {
-        &self.sources
-    }
-
     fn merge(self, other: Self) -> Self {
-        let mut sources = self.sources;
         let mut values = self.values;
-        sources.extend(other.sources);
         values.extend(other.values);
-        Self { sources, values }
+        Self { values }
     }
 }
 
 impl<T> Default for ReceiptUnique<T> {
     fn default() -> Self {
         Self {
-            sources: Vec::new(),
             values: Vec::new(),
         }
     }
@@ -69,10 +57,9 @@ where
         D: Deserializer<'de>,
     {
         let opt = Option::<T>::deserialize(deserializer)?;
-        let path = current_path().expect("Current source path is not set");
 
         Ok(match opt {
-            Some(value) => ReceiptUnique::new(path, value),
+            Some(value) => ReceiptUnique::new(value),
             None => ReceiptUnique::default(),
         })
     }

@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -20,10 +18,6 @@ impl ReceiptField for FromField {
 
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
-    }
-
-    fn sources(&self) -> &[PathBuf] {
-        self.0.sources()
     }
 
     fn merge(self, other: Self) -> Self {
