@@ -3,8 +3,10 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::builder::{Build, Builder};
+use crate::receipt::fields::ImportField;
 use crate::receipt::{
-    ReceiptError, ReceiptField, ReceiptImport,
+    ReceiptError, ReceiptField,
     fields::{
         DistroField, FilesField, FromField, HostnameField, ImageField, InstallField, NameField,
         PackagesField, UsersField,
@@ -20,7 +22,7 @@ pub struct Receipt {
     /// [`Distro`](crate::distro::Distro) value from the builder.
     pub distro: DistroField,
 
-    pub import: ReceiptImport,
+    pub import: ImportField,
     pub image: ImageField,
     pub from: FromField,
     pub name: NameField,
@@ -36,6 +38,25 @@ impl Receipt {
     pub fn from_file(path: &Path) -> Result<Self, ReceiptError> {
         let mut seen = HashSet::new();
         Self::from_file_inner(path, &mut seen)
+    }
+
+    pub fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
+        // `distro` must be built first — it populates `builder.distro`,
+        // which other fields read from during their build step.
+        self.distro.build(builder)?;
+
+        self.import.build(builder)?;
+        self.image.build(builder)?;
+        self.from.build(builder)?;
+        self.name.build(builder)?;
+        self.hostname.build(builder)?;
+        self.users.build(builder)?;
+        self.files.build(builder)?;
+        self.preinstall.build(builder)?;
+        self.packages.build(builder)?;
+        self.postinstall.build(builder)?;
+
+        Ok(())
     }
 
     fn merge(self, other: Self) -> Self {

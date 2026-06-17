@@ -13,7 +13,7 @@ use crate::receipt::unique::ReceiptUnique;
 /// for `podman build -t` tags.
 #[derive(Debug, Default, Deserialize)]
 #[serde(transparent)]
-pub struct ImageField(pub(crate) ReceiptUnique<String>);
+pub struct ImageField(ReceiptUnique<String>);
 
 impl ReceiptField for ImageField {
     type Value = Option<String>;

@@ -22,40 +22,40 @@ pub struct Builder {
     build_dir: TempDir,
 }
 
+/// Options for [`Builder::from_receipt_with`].
+#[derive(Debug, Default)]
+pub struct BuilderOptions {
+    pub version: Option<String>,
+    pub build_dir: Option<std::path::PathBuf>,
+    pub image: Option<String>,
+}
+
 /// Maximum number of layers to allow when rechunking with chunkah.
 const CHUNKAH_MAX_LAYERS: usize = 128;
 
 impl Builder {
     /// Builds containerfile lines from a receipt.
-    pub fn from_receipt(
+    pub fn from_receipt(receipt: Receipt) -> Result<Self, ReceiptError> {
+        Self::from_receipt_with(receipt, BuilderOptions::default())
+    }
+
+    /// Builds containerfile lines from a receipt with additional options.
+    pub fn from_receipt_with(
         receipt: Receipt,
-        version: Option<String>,
-        build_dir: Option<std::path::PathBuf>,
+        options: BuilderOptions,
     ) -> Result<Self, ReceiptError> {
         let mut builder = Builder {
             distro: None,
-            image: None,
-            version,
+            image: options.image,
+            version: options.version,
             name: None,
             base_image: None,
             created: get_timestamp_str(),
             lines: Vec::new(),
-            build_dir: make_build_dir(build_dir)?,
+            build_dir: make_build_dir(options.build_dir)?,
         };
 
-        // `distro` must be built first — it populates `builder.distro`,
-        // which other fields read from during their build step.
-        receipt.distro.build(&mut builder)?;
-        receipt.image.build(&mut builder)?;
-        receipt.from.build(&mut builder)?;
-        receipt.name.build(&mut builder)?;
-        receipt.hostname.build(&mut builder)?;
-        receipt.users.build(&mut builder)?;
-        receipt.files.build(&mut builder)?;
-        receipt.preinstall.build(&mut builder)?;
-        receipt.packages.build(&mut builder)?;
-        receipt.postinstall.build(&mut builder)?;
-
+        receipt.build(&mut builder)?;
         Ok(builder)
     }
 
@@ -206,7 +206,6 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::builder::BuildDir;
     use crate::receipt::Receipt;
 
     fn receipt_fixture() -> Receipt {
@@ -216,17 +215,14 @@ mod tests {
 
     #[test]
     fn write_containerfile_creates_file() {
-        let build_dir = BuildDir::temp().unwrap();
-        let path = build_dir.path().to_owned();
-        let builder = Builder::from_receipt(receipt_fixture(), build_dir, None).unwrap();
-        builder.write_containerfile().unwrap();
-        assert!(path.join("Containerfile").exists());
+        let builder = Builder::from_receipt(receipt_fixture()).unwrap();
+        let path = builder.write_containerfile().unwrap();
+        assert!(path.exists());
     }
 
     #[test]
     fn write_containerfile_content_matches() {
-        let build_dir = BuildDir::temp().unwrap();
-        let builder = Builder::from_receipt(receipt_fixture(), build_dir, None).unwrap();
+        let builder = Builder::from_receipt(receipt_fixture()).unwrap();
         let file_path = builder.write_containerfile().unwrap();
         let written = std::fs::read_to_string(&file_path).unwrap();
         assert_eq!(written, builder.to_containerfile());

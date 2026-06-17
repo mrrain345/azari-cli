@@ -1,11 +1,12 @@
+use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
+use crate::receipt::ReceiptImport;
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
-use crate::receipt::unique::ReceiptUnique;
 
 /// Field for the `from` key.
 ///
@@ -13,10 +14,10 @@ use crate::receipt::unique::ReceiptUnique;
 /// used instead. Emits the `FROM` instruction.
 #[derive(Debug, Default, Deserialize)]
 #[serde(transparent)]
-pub struct FromField(ReceiptUnique<String>);
+pub struct ImportField(ReceiptImport);
 
-impl ReceiptField for FromField {
-    type Value = Option<String>;
+impl ReceiptField for ImportField {
+    type Value = Vec<PathBuf>;
 
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
@@ -31,14 +32,22 @@ impl ReceiptField for FromField {
     }
 }
 
-impl Build for FromField {
-    fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
-        let distro = builder.distro()?;
-        let image = self
-            .value()?
-            .unwrap_or_else(|| distro.default_image().to_owned());
-        builder.set_base_image(image.clone());
-        builder.push(format!("FROM {image} as builder"));
+impl Deref for ImportField {
+    type Target = ReceiptImport;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for ImportField {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Build for ImportField {
+    fn build(self, _builder: &mut Builder) -> Result<(), ReceiptError> {
         Ok(())
     }
 }

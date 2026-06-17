@@ -3,4 +3,4 @@ mod builder;
 pub(crate) mod command;
 pub(crate) mod utils;
 
-pub use builder::{Build, Builder};
+pub use builder::{Build, Builder, BuilderOptions};

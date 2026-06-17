@@ -13,9 +13,7 @@ use crate::receipt::list::ReceiptList;
 /// distro-specific `RUN` install instruction.
 #[derive(Debug, Default, Deserialize)]
 #[serde(transparent)]
-pub struct PackagesField(pub(crate) ReceiptList<String>);
-
-
+pub struct PackagesField(ReceiptList<String>);
 
 impl ReceiptField for PackagesField {
     type Value = Vec<String>;

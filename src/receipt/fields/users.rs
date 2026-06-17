@@ -37,7 +37,7 @@ pub struct UserEntry {
 /// sources are treated as a conflict and return [`ReceiptError::FieldConflict`].
 #[derive(Debug, Default, Deserialize)]
 #[serde(transparent)]
-pub struct UsersField(pub(crate) ReceiptMap<String, UserEntry>);
+pub struct UsersField(ReceiptMap<String, UserEntry>);
 
 impl ReceiptField for UsersField {
     type Value = Vec<(String, UserEntry)>;

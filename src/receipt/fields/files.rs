@@ -77,7 +77,7 @@ impl<'de> Deserialize<'de> for FileEntry {
 /// and optional `owner`, `group`, and `chmod` attributes.
 #[derive(Debug, Default, Deserialize)]
 #[serde(transparent)]
-pub struct FilesField(pub(crate) ReceiptMap<String, FileEntry>);
+pub struct FilesField(ReceiptMap<String, FileEntry>);
 
 impl ReceiptField for FilesField {
     type Value = Vec<(String, FileEntry)>;

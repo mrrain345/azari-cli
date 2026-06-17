@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 use clap::Args;
 
-use crate::builder::Builder;
 use crate::builder::command::{podman_build, podman_push};
 use crate::builder::utils::{clear_tmp_dir, user_tmp_dir};
+use crate::builder::{Builder, BuilderOptions};
 use crate::receipt::{Receipt, ReceiptError};
 
 use super::Cli;
@@ -50,13 +50,14 @@ impl BuildArgs {
         let path = cli.receipt_path()?;
         let receipt = Receipt::from_file(&path)?;
 
-        let mut builder =
-            Builder::from_receipt(receipt, self.version.clone(), self.build_dir.clone())?;
-
-        // Override the image name if specified via CLI flag.
-        if let Some(image) = &self.image {
-            builder.set_image(image.clone());
-        }
+        let mut builder = Builder::from_receipt_with(
+            receipt,
+            BuilderOptions {
+                version: self.version.clone(),
+                build_dir: self.build_dir.clone(),
+                image: self.image.clone(),
+            },
+        )?;
 
         builder.add_trailer(!self.skip_rechunk);
         builder.write_containerfile()?;

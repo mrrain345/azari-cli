@@ -12,9 +12,7 @@ use crate::receipt::unique::ReceiptUnique;
 /// Emits a distro-specific `RUN` instruction to set the container's hostname.
 #[derive(Debug, Default, Deserialize)]
 #[serde(transparent)]
-pub struct HostnameField(pub(crate) ReceiptUnique<String>);
-
-
+pub struct HostnameField(ReceiptUnique<String>);
 
 impl ReceiptField for HostnameField {
     type Value = Option<String>;

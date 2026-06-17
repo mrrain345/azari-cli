@@ -12,7 +12,7 @@ use crate::receipt::list::ReceiptList;
 /// Each entry is a shell command that is emitted as its own `RUN` instruction.
 #[derive(Debug, Default, Deserialize)]
 #[serde(transparent)]
-pub struct InstallField(pub(crate) ReceiptList<String>);
+pub struct InstallField(ReceiptList<String>);
 
 impl ReceiptField for InstallField {
     type Value = Vec<String>;

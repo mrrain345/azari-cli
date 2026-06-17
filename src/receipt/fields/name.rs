@@ -13,7 +13,7 @@ use crate::receipt::unique::ReceiptUnique;
 /// and updates the `NAME`, `VERSION`, and `PRETTY_NAME` fields in `/etc/os-release`.
 #[derive(Debug, Default, Deserialize)]
 #[serde(transparent)]
-pub struct NameField(pub(crate) ReceiptUnique<String>);
+pub struct NameField(ReceiptUnique<String>);
 
 impl ReceiptField for NameField {
     type Value = Option<String>;

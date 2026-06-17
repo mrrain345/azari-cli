@@ -14,7 +14,7 @@ use crate::receipt::unique::ReceiptUnique;
 /// value stored in the builder that every subsequent field reads.
 #[derive(Debug, Default, Deserialize)]
 #[serde(transparent)]
-pub struct DistroField(pub(crate) ReceiptUnique<String>);
+pub struct DistroField(ReceiptUnique<String>);
 
 impl ReceiptField for DistroField {
     type Value = Option<String>;
