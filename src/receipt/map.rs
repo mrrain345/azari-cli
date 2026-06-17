@@ -6,6 +6,8 @@ use serde::{
     ser::{Serialize, SerializeMap, Serializer},
 };
 
+use merge::Merge;
+
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
 
@@ -47,19 +49,17 @@ where
         }
         Ok(flat)
     }
+}
 
-    fn merge(self, other: Self) -> Self {
-        let mut values = self.values;
-        values.extend(other.values);
-        Self { values }
+impl<K, V> Merge for ReceiptMap<K, V> {
+    fn merge(&mut self, other: Self) {
+        self.values.extend(other.values);
     }
 }
 
 impl<K, V> Default for ReceiptMap<K, V> {
     fn default() -> Self {
-        Self {
-            values: Vec::new(),
-        }
+        Self { values: Vec::new() }
     }
 }
 
@@ -155,6 +155,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use merge::Merge;
+
     use super::ReceiptMap;
     use crate::receipt::error::ReceiptError;
     use crate::receipt::field::ReceiptField;
@@ -194,9 +196,8 @@ mod tests {
     #[test]
     fn merge_unique_keys_preserves_source_order() {
         // "imported has precedence" pattern: imported.merge(current)
-        let imported = ReceiptMap::new(pairs(&[("a", "base"), ("b", "base")]));
-        let current = ReceiptMap::new(pairs(&[("c", "root")]));
-        let merged = imported.merge(current);
+        let mut merged = ReceiptMap::new(pairs(&[("a", "base"), ("b", "base")]));
+        merged.merge(ReceiptMap::new(pairs(&[("c", "root")])));
         assert_eq!(
             merged.value().unwrap(),
             pairs(&[("a", "base"), ("b", "base"), ("c", "root")])
@@ -205,16 +206,16 @@ mod tests {
 
     #[test]
     fn merge_duplicate_key_across_sources_is_conflict() {
-        let imported = ReceiptMap::new(pairs(&[("shared", "from-base")]));
-        let current = ReceiptMap::new(pairs(&[("shared", "from-root")]));
-        let merged = imported.merge(current);
+        let mut merged = ReceiptMap::new(pairs(&[("shared", "from-base")]));
+        merged.merge(ReceiptMap::new(pairs(&[("shared", "from-root")])));
         assert!(matches!(merged.value(), Err(ReceiptError::FieldConflict)));
     }
 
     #[test]
     fn merge_with_default_is_identity() {
         let map = ReceiptMap::new(pairs(&[("k", "v")]));
-        let merged = ReceiptMap::default().merge(map.clone());
+        let mut merged = ReceiptMap::default();
+        merged.merge(map.clone());
         assert_eq!(merged.value().unwrap(), map.value().unwrap());
     }
 

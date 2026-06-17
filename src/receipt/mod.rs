@@ -1,6 +1,7 @@
+pub mod fields;
+
 mod error;
 mod field;
-pub mod fields;
 mod import;
 mod list;
 mod map;

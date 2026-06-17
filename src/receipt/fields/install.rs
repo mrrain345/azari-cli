@@ -1,3 +1,4 @@
+use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -8,7 +9,7 @@ use crate::receipt::list::ReceiptList;
 /// Field for `preinstall` and `postinstall` keys.
 ///
 /// Each entry is a shell command that is emitted as its own `RUN` instruction.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
 pub struct InstallField(ReceiptList<String>);
 
@@ -17,10 +18,6 @@ impl ReceiptField for InstallField {
 
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
-    }
-
-    fn merge(self, other: Self) -> Self {
-        Self(self.0.merge(other.0))
     }
 }
 

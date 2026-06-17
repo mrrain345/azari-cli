@@ -5,6 +5,8 @@ use serde::{
     ser::{Serialize, Serializer},
 };
 
+use merge::Merge;
+
 use crate::receipt::ReceiptError;
 use crate::receipt::field::ReceiptField;
 use crate::receipt::path::current_path;
@@ -62,18 +64,17 @@ impl ReceiptField for ReceiptImport {
         Ok(self.pending)
     }
 
-    fn merge(self, other: Self) -> Self {
-        let mut pending = self.pending;
-        pending.extend(other.pending);
+}
 
-        let mut loaded = self.loaded;
+impl Merge for ReceiptImport {
+    fn merge(&mut self, other: Self) {
+        self.pending.extend(other.pending);
+
         for p in other.loaded {
-            if !loaded.iter().any(|x| x == &p) {
-                loaded.push(p);
+            if !self.loaded.iter().any(|x| x == &p) {
+                self.loaded.push(p);
             }
         }
-
-        Self { pending, loaded }
     }
 }
 

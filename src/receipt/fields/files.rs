@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use merge::Merge;
 use serde::{Deserialize, Deserializer};
 
 use crate::builder::{Build, Builder};
@@ -75,7 +76,7 @@ impl<'de> Deserialize<'de> for FileEntry {
 /// A map from target paths (inside the image) to file descriptors. Each
 /// descriptor specifies the file's source (`content`, `path`, or `symlink`)
 /// and optional `owner`, `group`, and `chmod` attributes.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
 pub struct FilesField(ReceiptMap<String, FileEntry>);
 
@@ -84,10 +85,6 @@ impl ReceiptField for FilesField {
 
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
-    }
-
-    fn merge(self, other: Self) -> Self {
-        Self(self.0.merge(other.0))
     }
 }
 
@@ -234,6 +231,8 @@ fn format_chown_opt(owner: &Option<String>, group: &Option<String>) -> Option<St
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+
+    use merge::Merge;
 
     use crate::receipt::error::ReceiptError;
     use crate::receipt::field::ReceiptField;
@@ -489,10 +488,10 @@ mod tests {
     #[test]
     fn merge_combines_entries_from_both() {
         let _guard1 = SourcePathGuard::push_path(p("/a.yaml"));
-        let a: FilesField = serde_saphyr::from_str("/etc/a:\n  content: aaa\n").unwrap();
+        let mut merged: FilesField = serde_saphyr::from_str("/etc/a:\n  content: aaa\n").unwrap();
         let _guard2 = SourcePathGuard::push_path(p("/b.yaml"));
         let b: FilesField = serde_saphyr::from_str("/etc/b:\n  content: bbb\n").unwrap();
-        let merged = a.merge(b);
+        merged.merge(b);
         let entries = merged.value().unwrap();
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0].0, "/etc/a");
@@ -502,10 +501,11 @@ mod tests {
     #[test]
     fn duplicate_target_across_sources_is_conflict() {
         let _guard1 = SourcePathGuard::push_path(p("/a.yaml"));
-        let a: FilesField = serde_saphyr::from_str("/etc/same:\n  content: aaa\n").unwrap();
+        let mut merged: FilesField =
+            serde_saphyr::from_str("/etc/same:\n  content: aaa\n").unwrap();
         let _guard2 = SourcePathGuard::push_path(p("/b.yaml"));
         let b: FilesField = serde_saphyr::from_str("/etc/same:\n  content: bbb\n").unwrap();
-        let merged = a.merge(b);
+        merged.merge(b);
         assert!(matches!(merged.value(), Err(ReceiptError::FieldConflict)));
     }
 }

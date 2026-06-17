@@ -1,3 +1,4 @@
+use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -8,7 +9,7 @@ use crate::receipt::unique::ReceiptUnique;
 /// Field for the `hostname` key.
 ///
 /// Emits a distro-specific `RUN` instruction to set the container's hostname.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
 pub struct HostnameField(ReceiptUnique<String>);
 
@@ -17,10 +18,6 @@ impl ReceiptField for HostnameField {
 
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
-    }
-
-    fn merge(self, other: Self) -> Self {
-        Self(self.0.merge(other.0))
     }
 }
 

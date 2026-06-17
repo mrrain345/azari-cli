@@ -21,3 +21,4 @@ tempfile = "3.27.0"
 thiserror = "2.0.18"
 chrono = "0.4.44"
 ctrlc = "3.5.2"
+merge = { version = "0.1", features = ["derive"] }

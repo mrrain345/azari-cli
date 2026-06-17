@@ -1,3 +1,4 @@
+use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -33,7 +34,7 @@ pub struct UserEntry {
 /// A map from usernames to [`UserEntry`] descriptors. Entries from every
 /// source are merged into a single ordered map. Duplicate usernames across
 /// sources are treated as a conflict and return [`ReceiptError::FieldConflict`].
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
 pub struct UsersField(ReceiptMap<String, UserEntry>);
 
@@ -42,10 +43,6 @@ impl ReceiptField for UsersField {
 
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
-    }
-
-    fn merge(self, other: Self) -> Self {
-        Self(self.0.merge(other.0))
     }
 }
 

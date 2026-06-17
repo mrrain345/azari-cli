@@ -1,3 +1,4 @@
+use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -10,7 +11,7 @@ use crate::receipt::unique::ReceiptUnique;
 /// Holds the name of the target Linux distribution. During the build this is
 /// the **first** field processed: it resolves to a [`Distro`](crate::distro::Distro)
 /// value stored in the builder that every subsequent field reads.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
 pub struct DistroField(ReceiptUnique<String>);
 
@@ -19,10 +20,6 @@ impl ReceiptField for DistroField {
 
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
-    }
-
-    fn merge(self, other: Self) -> Self {
-        Self(self.0.merge(other.0))
     }
 }
 

@@ -1,3 +1,4 @@
+use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -9,7 +10,7 @@ use crate::receipt::unique::ReceiptUnique;
 ///
 /// Specifies the image name (e.g. `docker.io/example/myimage`) used as a base
 /// for `podman build -t` tags.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
 pub struct ImageField(ReceiptUnique<String>);
 
@@ -18,10 +19,6 @@ impl ReceiptField for ImageField {
 
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
-    }
-
-    fn merge(self, other: Self) -> Self {
-        Self(self.0.merge(other.0))
     }
 }
 

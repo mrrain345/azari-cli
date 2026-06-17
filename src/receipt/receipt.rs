@@ -1,12 +1,13 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
 use crate::receipt::fields::ImportField;
 use crate::receipt::{
-    ReceiptError, ReceiptField,
+    ReceiptError,
     fields::{
         DistroField, FilesField, FromField, HostnameField, ImageField, InstallField, NameField,
         PackagesField, UsersField,
@@ -14,14 +15,10 @@ use crate::receipt::{
     path::SourcePathGuard,
 };
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct Receipt {
-    /// Must remain the first field processed during a build — every other
-    /// field that emits Containerfile instructions reads the resolved
-    /// [`Distro`](crate::distro::Distro) value from the builder.
     pub distro: DistroField,
-
     pub import: ImportField,
     pub image: ImageField,
     pub from: FromField,
@@ -34,17 +31,11 @@ pub struct Receipt {
     pub postinstall: InstallField,
 }
 
-impl Receipt {
-    pub fn from_file(path: &Path) -> Result<Self, ReceiptError> {
-        let mut seen = HashSet::new();
-        Self::from_file_inner(path, &mut seen)
-    }
-
-    pub fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
+impl Build for Receipt {
+    fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
         // `distro` must be built first — it populates `builder.distro`,
         // which other fields read from during their build step.
         self.distro.build(builder)?;
-
         self.import.build(builder)?;
         self.image.build(builder)?;
         self.from.build(builder)?;
@@ -58,21 +49,12 @@ impl Receipt {
 
         Ok(())
     }
+}
 
-    fn merge(self, other: Self) -> Self {
-        Self {
-            distro: self.distro.merge(other.distro),
-            import: self.import.merge(other.import),
-            image: self.image.merge(other.image),
-            from: self.from.merge(other.from),
-            name: self.name.merge(other.name),
-            hostname: self.hostname.merge(other.hostname),
-            users: self.users.merge(other.users),
-            files: self.files.merge(other.files),
-            preinstall: self.preinstall.merge(other.preinstall),
-            packages: self.packages.merge(other.packages),
-            postinstall: self.postinstall.merge(other.postinstall),
-        }
+impl Receipt {
+    pub fn from_file(path: &Path) -> Result<Self, ReceiptError> {
+        let mut seen = HashSet::new();
+        Self::from_file_inner(path, &mut seen)
     }
 
     fn from_file_inner(path: &Path, seen: &mut HashSet<PathBuf>) -> Result<Self, ReceiptError> {
@@ -87,10 +69,11 @@ impl Receipt {
 
         while let Some(next) = current.import.process_next_import() {
             let imported = Self::from_file_inner(&next, seen)?;
-            base = base.merge(imported);
+            base.merge(imported);
         }
 
-        Ok(base.merge(current))
+        base.merge(current);
+        Ok(base)
     }
 
     fn parse_single(path: &Path) -> Result<Self, ReceiptError> {

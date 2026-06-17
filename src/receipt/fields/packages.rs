@@ -1,3 +1,4 @@
+use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -9,7 +10,7 @@ use crate::receipt::list::ReceiptList;
 ///
 /// Merges package lists from all imported receipts and emits a single
 /// distro-specific `RUN` install instruction.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
 pub struct PackagesField(ReceiptList<String>);
 
@@ -18,10 +19,6 @@ impl ReceiptField for PackagesField {
 
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
-    }
-
-    fn merge(self, other: Self) -> Self {
-        Self(self.0.merge(other.0))
     }
 }
 

@@ -3,6 +3,8 @@ use serde::{
     ser::{Serialize, Serializer},
 };
 
+use merge::Merge;
+
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
 
@@ -31,11 +33,11 @@ impl<T> ReceiptField for ReceiptList<T> {
     fn value(self) -> Result<Self::Value, ReceiptError> {
         Ok(self.values.into_iter().flatten().collect())
     }
+}
 
-    fn merge(self, other: Self) -> Self {
-        let mut values = self.values;
-        values.extend(other.values);
-        Self { values }
+impl<T> Merge for ReceiptList<T> {
+    fn merge(&mut self, other: Self) {
+        self.values.extend(other.values);
     }
 }
 

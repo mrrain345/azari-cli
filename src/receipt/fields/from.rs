@@ -1,3 +1,4 @@
+use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -9,7 +10,7 @@ use crate::receipt::unique::ReceiptUnique;
 ///
 /// Overrides the base OCI image. When absent the distro's default image is
 /// used instead. Emits the `FROM` instruction.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
 pub struct FromField(ReceiptUnique<String>);
 
@@ -18,10 +19,6 @@ impl ReceiptField for FromField {
 
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
-    }
-
-    fn merge(self, other: Self) -> Self {
-        Self(self.0.merge(other.0))
     }
 }
 

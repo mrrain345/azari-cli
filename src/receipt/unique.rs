@@ -1,3 +1,4 @@
+use merge::Merge;
 use serde::{
     de::{Deserialize, Deserializer},
     ser::{Serialize, Serializer},
@@ -32,19 +33,17 @@ impl<T> ReceiptField for ReceiptUnique<T> {
 
         Ok(self.values.into_iter().next())
     }
+}
 
-    fn merge(self, other: Self) -> Self {
-        let mut values = self.values;
-        values.extend(other.values);
-        Self { values }
+impl<T> Merge for ReceiptUnique<T> {
+    fn merge(&mut self, other: Self) {
+        self.values.extend(other.values);
     }
 }
 
 impl<T> Default for ReceiptUnique<T> {
     fn default() -> Self {
-        Self {
-            values: Vec::new(),
-        }
+        Self { values: Vec::new() }
     }
 }
 
