@@ -181,9 +181,7 @@ pub(crate) fn podman_install(
     let loopback_path: String;
 
     if via_loopback {
-        let host_path = Path::new(device)
-            .canonicalize()
-            .map_err(|e| ReceiptError::Io(e))?;
+        let host_path = Path::new(device).canonicalize()?;
         let parent = host_path.parent().unwrap_or(Path::new("/"));
         let filename = host_path
             .file_name()

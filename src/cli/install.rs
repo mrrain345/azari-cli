@@ -33,15 +33,16 @@ pub struct InstallArgs {
 
 impl InstallArgs {
     pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
-        let image = if let Some(image) = &self.image {
-            image.clone()
-        } else {
-            let path = cli.receipt_path()?;
-            let receipt = Receipt::from_file(&path)?;
-            receipt
-                .image
-                .value()?
-                .ok_or(ReceiptError::ImageNotSpecified)?
+        let image = match &self.image {
+            Some(image) => image.clone(),
+            None => {
+                let path = cli.receipt_path()?;
+                let receipt = Receipt::from_file(&path)?;
+                receipt
+                    .image
+                    .value()?
+                    .ok_or(ReceiptError::ImageNotSpecified)?
+            }
         };
 
         let version = self.version.as_deref().unwrap_or("latest");
@@ -53,12 +54,8 @@ impl InstallArgs {
             !device_path.starts_with("/dev") && (device_path.is_file() || !device_path.exists());
 
         if via_loopback {
-            if device_path.exists() {
-                if !self.wipe {
-                    return Err(ReceiptError::FileExistsWithoutWipe(
-                        device_path.to_path_buf(),
-                    ));
-                }
+            if device_path.exists() && !self.wipe {
+                return Err(ReceiptError::FileExistsWithoutWipe(device_path.to_owned()));
             }
             println!(
                 "Installing image {image}:{version} to file {} ({})",

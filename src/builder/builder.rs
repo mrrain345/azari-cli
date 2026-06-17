@@ -182,7 +182,7 @@ impl Builder {
                 "RUN {} \\\n  {} \\\n  {}",
                 "--mount=type=bind,target=/usr/lib/azari/chunkah,rw",
                 "--mount=from=builder,target=/chunkah,ro",
-                format!("chunkah build --max-layers {CHUNKAH_MAX_LAYERS} --output oci:/usr/lib/azari/chunkah/out")
+                format_args!("chunkah build --max-layers {CHUNKAH_MAX_LAYERS} --output oci:/usr/lib/azari/chunkah/out")
             ));
             self.push("");
             self.push("FROM oci:chunkah/out");

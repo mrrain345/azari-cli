@@ -24,15 +24,16 @@ pub struct PushArgs {
 
 impl PushArgs {
     pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
-        let image = if let Some(image) = &self.image {
-            image.clone()
-        } else {
-            let path = cli.receipt_path()?;
-            let receipt = Receipt::from_file(&path)?;
-            receipt
-                .image
-                .value()?
-                .ok_or(ReceiptError::ImageNotSpecified)?
+        let image = match &self.image {
+            Some(image) => image.clone(),
+            None => {
+                let path = cli.receipt_path()?;
+                let receipt = Receipt::from_file(&path)?;
+                receipt
+                    .image
+                    .value()?
+                    .ok_or(ReceiptError::ImageNotSpecified)?
+            }
         };
 
         podman_push(&image, self.version.as_deref(), !self.no_latest)?;

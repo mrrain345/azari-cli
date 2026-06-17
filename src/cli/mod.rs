@@ -50,11 +50,10 @@ impl Cli {
             return Ok(path.clone());
         }
 
-        if let Ok(val) = std::env::var("AZARI_RECEIPT") {
-            return Ok(PathBuf::from(val));
+        match std::env::var_os("AZARI_RECEIPT") {
+            Some(val) if !val.is_empty() => Ok(PathBuf::from(val)),
+            _ => Err(ReceiptError::ReceiptNotProvided),
         }
-
-        Err(ReceiptError::ReceiptNotProvided)
     }
 }
 

@@ -117,14 +117,14 @@ impl Build for FilesField {
                             ..Default::default()
                         };
                         fs_extra::dir::copy(&src_path, &dest, &opts)
-                            .map_err(|e| std::io::Error::other(e))?;
+                            .map_err(std::io::Error::other)?;
                     } else {
                         fs_extra::file::copy(
                             &src_path,
                             &dest,
                             &fs_extra::file::CopyOptions::default(),
                         )
-                        .map_err(|e| std::io::Error::other(e))?;
+                        .map_err(std::io::Error::other)?;
                     }
                     builder.push(copy_instruction(
                         &filename,
