@@ -9,6 +9,22 @@ use crate::receipt::field::ReceiptField;
 use crate::receipt::map::ReceiptMap;
 use crate::receipt::path::current_path;
 
+/// Field for the `files` key.
+///
+/// A map from target paths (inside the image) to file descriptors. Each
+/// descriptor specifies the file's source (`content`, `path`, or `symlink`)
+/// and optional `owner`, `group`, and `chmod` attributes.
+#[derive(Debug, Default, Deserialize, Merge)]
+#[serde(transparent)]
+pub struct FilesField(ReceiptMap<String, FileEntry>);
+
+/// Describes a single file to be placed in the container image.
+#[derive(Debug)]
+pub struct FileEntry {
+    pub source: FileSource,
+    pub meta: FileMetadata,
+}
+
 /// The source of a file's content in a [`FilesField`] entry.
 #[derive(Debug)]
 pub enum FileSource {
@@ -21,13 +37,107 @@ pub enum FileSource {
     Symlink(String),
 }
 
-/// Describes a single file to be placed in the container image.
-#[derive(Debug)]
-pub struct FileEntry {
+/// Ownership and permission metadata for a [`FileEntry`].
+#[derive(Debug, Default)]
+pub struct FileMetadata {
     pub owner: Option<String>,
     pub group: Option<String>,
     pub chmod: Option<String>,
-    pub source: FileSource,
+}
+
+impl ReceiptField for FilesField {
+    type Value = Vec<(String, FileEntry)>;
+
+    fn value(self) -> Result<Self::Value, ReceiptError> {
+        self.0.value()
+    }
+}
+
+impl Build for FilesField {
+    fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
+        for (target, entry) in self.value()? {
+            build_entry(builder, &target, entry)?;
+        }
+
+        Ok(())
+    }
+}
+
+fn build_entry(builder: &mut Builder, target: &str, entry: FileEntry) -> Result<(), ReceiptError> {
+    let meta = entry.meta;
+    match entry.source {
+        FileSource::Content(content) => build_content_entry(builder, target, content, meta),
+        FileSource::Path(src_path) => build_path_entry(builder, target, src_path, meta),
+        FileSource::Symlink(symlink_target) => {
+            build_symlink_entry(builder, target, &symlink_target, meta)
+        }
+    }
+}
+
+fn build_content_entry(
+    builder: &mut Builder,
+    target: &str,
+    content: String,
+    meta: FileMetadata,
+) -> Result<(), ReceiptError> {
+    let filename = target_to_filename(target);
+    let dest = builder.build_dir().join(&filename);
+
+    std::fs::write(&dest, content)?;
+    builder.push(copy_instruction(&filename, target, &meta));
+    Ok(())
+}
+
+fn build_path_entry(
+    builder: &mut Builder,
+    target: &str,
+    src_path: PathBuf,
+    meta: FileMetadata,
+) -> Result<(), ReceiptError> {
+    let filename = target_to_filename(target);
+    let dest = builder.build_dir().join(&filename);
+
+    copy_path_to_dest(&src_path, &dest)?;
+    builder.push(copy_instruction(&filename, target, &meta));
+    Ok(())
+}
+
+fn copy_path_to_dest(src: &std::path::Path, dest: &std::path::Path) -> Result<(), ReceiptError> {
+    let res = if src.is_dir() {
+        std::fs::create_dir_all(dest)?;
+        let opts = fs_extra::dir::CopyOptions {
+            copy_inside: true,
+            ..Default::default()
+        };
+        fs_extra::dir::copy(src, dest, &opts)
+    } else {
+        fs_extra::file::copy(src, dest, &Default::default())
+    };
+
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => Err(std::io::Error::other(e).into()),
+    }
+}
+
+fn build_symlink_entry(
+    builder: &mut Builder,
+    target: &str,
+    symlink_target: &str,
+    meta: FileMetadata,
+) -> Result<(), ReceiptError> {
+    builder.push(format!(
+        "RUN ln -sf {} {}",
+        shell_quote(symlink_target),
+        shell_quote(target)
+    ));
+    if let Some(chown) = chown_string(&meta) {
+        builder.push(format!("RUN chown -h {chown} {}", shell_quote(target)));
+    }
+    if let Some(mode) = meta.chmod {
+        builder.push(format!("RUN chmod {mode} {}", shell_quote(target)));
+    }
+    Ok(())
 }
 
 impl<'de> Deserialize<'de> for FileEntry {
@@ -63,95 +173,13 @@ impl<'de> Deserialize<'de> for FileEntry {
         };
 
         Ok(FileEntry {
-            owner: raw.owner,
-            group: raw.group,
-            chmod: raw.chmod,
             source,
+            meta: FileMetadata {
+                owner: raw.owner,
+                group: raw.group,
+                chmod: raw.chmod,
+            },
         })
-    }
-}
-
-/// Field for the `files` key.
-///
-/// A map from target paths (inside the image) to file descriptors. Each
-/// descriptor specifies the file's source (`content`, `path`, or `symlink`)
-/// and optional `owner`, `group`, and `chmod` attributes.
-#[derive(Debug, Default, Deserialize, Merge)]
-#[serde(transparent)]
-pub struct FilesField(ReceiptMap<String, FileEntry>);
-
-impl ReceiptField for FilesField {
-    type Value = Vec<(String, FileEntry)>;
-
-    fn value(self) -> Result<Self::Value, ReceiptError> {
-        self.0.value()
-    }
-}
-
-impl Build for FilesField {
-    fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
-        let files = self.value()?;
-        let build_dir = builder.build_dir().to_owned();
-
-        for (target, entry) in files {
-            match entry.source {
-                FileSource::Content(content) => {
-                    let filename = target_to_filename(&target);
-                    let dest = build_dir.join(&filename);
-                    std::fs::write(&dest, content)?;
-                    builder.push(copy_instruction(
-                        &filename,
-                        &target,
-                        &entry.owner,
-                        &entry.group,
-                        &entry.chmod,
-                    ));
-                }
-                FileSource::Path(src_path) => {
-                    let filename = target_to_filename(&target);
-                    let dest = build_dir.join(&filename);
-                    if src_path.is_dir() {
-                        std::fs::create_dir_all(&dest)?;
-                        let opts = fs_extra::dir::CopyOptions {
-                            copy_inside: true,
-                            ..Default::default()
-                        };
-                        fs_extra::dir::copy(&src_path, &dest, &opts)
-                            .map_err(std::io::Error::other)?;
-                    } else {
-                        fs_extra::file::copy(
-                            &src_path,
-                            &dest,
-                            &fs_extra::file::CopyOptions::default(),
-                        )
-                        .map_err(std::io::Error::other)?;
-                    }
-                    builder.push(copy_instruction(
-                        &filename,
-                        &target,
-                        &entry.owner,
-                        &entry.group,
-                        &entry.chmod,
-                    ));
-                }
-                FileSource::Symlink(symlink_target) => {
-                    builder.push(format!(
-                        "RUN ln -sf {} {}",
-                        shell_quote(&symlink_target),
-                        shell_quote(&target),
-                    ));
-                    if entry.owner.is_some() || entry.group.is_some() {
-                        let chown = format_chown(&entry.owner, &entry.group);
-                        builder.push(format!("RUN chown -h {chown} {}", shell_quote(&target)));
-                    }
-                    if let Some(mode) = &entry.chmod {
-                        builder.push(format!("RUN chmod {mode} {}", shell_quote(&target)));
-                    }
-                }
-            }
-        }
-
-        Ok(())
     }
 }
 
@@ -164,12 +192,9 @@ fn target_to_filename(target: &str) -> String {
     let stripped = target.trim_start_matches('/');
     stripped
         .chars()
-        .map(|c| {
-            if c.is_alphanumeric() || c == '.' || c == '-' {
-                c
-            } else {
-                '_'
-            }
+        .map(|c| match c.is_alphanumeric() || c == '.' || c == '-' {
+            true => c,
+            false => '_',
         })
         .collect()
 }
@@ -181,20 +206,14 @@ fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
 
-fn copy_instruction(
-    src: &str,
-    dst: &str,
-    owner: &Option<String>,
-    group: &Option<String>,
-    chmod: &Option<String>,
-) -> String {
+fn copy_instruction(src: &str, dst: &str, meta: &FileMetadata) -> String {
     let mut parts = vec!["COPY".to_owned()];
 
-    if let Some(mode) = chmod {
+    if let Some(mode) = &meta.chmod {
         parts.push(format!("--chmod={mode}"));
     }
 
-    if let Some(chown) = format_chown_opt(owner, group) {
+    if let Some(chown) = chown_string(meta) {
         parts.push(format!("--chown={chown}"));
     }
 
@@ -212,19 +231,13 @@ fn copy_instruction(
     parts.join(" ")
 }
 
-fn format_chown(owner: &Option<String>, group: &Option<String>) -> String {
-    match (owner, group) {
-        (Some(o), Some(g)) => format!("{o}:{g}"),
-        (Some(o), None) => o.clone(),
-        (None, Some(g)) => format!(":{g}"),
-        (None, None) => String::new(),
-    }
-}
-
-fn format_chown_opt(owner: &Option<String>, group: &Option<String>) -> Option<String> {
+fn chown_string(meta: &FileMetadata) -> Option<String> {
+    let FileMetadata { owner, group, .. } = meta;
     match (owner, group) {
         (None, None) => None,
-        _ => Some(format_chown(owner, group)),
+        (Some(o), Some(g)) => Some(format!("{o}:{g}")),
+        (Some(o), None) => Some(o.to_owned()),
+        (None, Some(g)) => Some(format!(":{g}")),
     }
 }
 
@@ -244,109 +257,97 @@ mod tests {
         PathBuf::from(s)
     }
 
-    // --- target_to_filename ---
-
     #[test]
-    fn filename_strips_leading_slash() {
-        assert_eq!(target_to_filename("/etc/hostname"), "etc_hostname");
-    }
-
-    #[test]
-    fn filename_without_leading_slash() {
-        assert_eq!(target_to_filename("etc/hostname"), "etc_hostname");
-    }
-
-    #[test]
-    fn filename_deeply_nested_path() {
-        assert_eq!(target_to_filename("/a/b/c/d"), "a_b_c_d");
-    }
-
-    #[test]
-    fn filename_spaces_are_replaced() {
-        assert_eq!(target_to_filename("/etc/my file"), "etc_my_file");
-    }
-
-    #[test]
-    fn filename_special_chars_are_replaced() {
+    fn filename_simple() {
         // spaces, parens, colons all become underscores
-        assert_eq!(target_to_filename("/etc/a b:c(d)"), "etc_a_b_c_d_");
-    }
-
-    // --- shell_quote ---
-
-    #[test]
-    fn shell_quote_plain_path() {
-        assert_eq!(shell_quote("/etc/hostname"), "'/etc/hostname'");
+        assert_eq!(target_to_filename("/etc/my-file"), "etc_my-file");
     }
 
     #[test]
-    fn shell_quote_path_with_spaces() {
-        assert_eq!(shell_quote("/etc/my file"), "'/etc/my file'");
+    fn filename_replace_special_chars() {
+        // spaces, parens, colons all become underscores
+        assert_eq!(target_to_filename("/etc/a b:c(d)?!"), "etc_a_b_c_d___");
     }
 
     #[test]
-    fn shell_quote_embedded_single_quote() {
-        assert_eq!(shell_quote("it's"), "'it'\\''s'");
+    fn filename_unicode_support() {
+        assert_eq!(target_to_filename("/etc/配置"), "etc_配置");
     }
 
-    // --- copy_instruction ---
+    #[test]
+    fn shell_quote_path() {
+        assert_eq!(shell_quote("/etc/it's my file"), "'/etc/it'\\''s my file'");
+    }
 
     #[test]
     fn copy_instruction_minimal() {
         assert_eq!(
-            copy_instruction("etc_motd--abc123", "/etc/motd", &None, &None, &None),
+            copy_instruction("etc_motd--abc123", "/etc/motd", &FileMetadata::default()),
             "COPY etc_motd--abc123 /etc/motd"
         );
     }
 
     #[test]
     fn copy_instruction_with_chmod_only() {
+        let meta = FileMetadata {
+            owner: None,
+            group: None,
+            chmod: Some("644".to_string()),
+        };
         assert_eq!(
-            copy_instruction("src", "/dst", &None, &None, &Some("644".into())),
+            copy_instruction("src", "/dst", &meta),
             "COPY --chmod=644 src /dst"
         );
     }
 
     #[test]
     fn copy_instruction_with_owner_only() {
+        let meta = FileMetadata {
+            owner: Some("root".to_string()),
+            group: None,
+            chmod: None,
+        };
         assert_eq!(
-            copy_instruction("src", "/dst", &Some("root".into()), &None, &None),
+            copy_instruction("src", "/dst", &meta),
             "COPY --chown=root src /dst"
         );
     }
 
     #[test]
     fn copy_instruction_with_group_only() {
+        let meta = FileMetadata {
+            owner: None,
+            group: Some("wheel".to_string()),
+            chmod: None,
+        };
         assert_eq!(
-            copy_instruction("src", "/dst", &None, &Some("wheel".into()), &None),
+            copy_instruction("src", "/dst", &meta),
             "COPY --chown=:wheel src /dst"
         );
     }
 
     #[test]
     fn copy_instruction_with_owner_and_group() {
+        let meta = FileMetadata {
+            owner: Some("root".to_string()),
+            group: Some("wheel".to_string()),
+            chmod: None,
+        };
         assert_eq!(
-            copy_instruction(
-                "src",
-                "/dst",
-                &Some("root".into()),
-                &Some("wheel".into()),
-                &None,
-            ),
+            copy_instruction("src", "/dst", &meta),
             "COPY --chown=root:wheel src /dst"
         );
     }
 
     #[test]
     fn copy_instruction_with_all_flags() {
+        let meta = FileMetadata {
+            owner: Some("user".to_string()),
+            group: Some("grp".to_string()),
+            chmod: Some("755".to_string()),
+        };
         assert_eq!(
-            copy_instruction(
-                "src",
-                "/dst",
-                &Some("user".into()),
-                &Some("grp".into()),
-                &Some("755".into()),
-            ),
+            copy_instruction("src", "/dst", &meta),
             "COPY --chmod=755 --chown=user:grp src /dst"
         );
     }
@@ -354,56 +355,23 @@ mod tests {
     #[test]
     fn copy_instruction_dst_with_spaces_uses_quoted_form() {
         assert_eq!(
-            copy_instruction("src", "/path with spaces", &None, &None, &None),
+            copy_instruction("src", "/path with spaces", &FileMetadata::default()),
             r#"COPY ["src", "/path with spaces"]"#
         );
     }
 
     #[test]
     fn copy_instruction_dst_with_spaces_and_flags() {
+        let meta = FileMetadata {
+            owner: Some("root".to_string()),
+            group: None,
+            chmod: Some("644".to_string()),
+        };
         assert_eq!(
-            copy_instruction(
-                "src",
-                "/dst file",
-                &Some("root".into()),
-                &None,
-                &Some("644".into()),
-            ),
+            copy_instruction("src", "/dst file", &meta),
             r#"COPY --chmod=644 --chown=root ["src", "/dst file"]"#
         );
     }
-
-    // --- format_chown / format_chown_opt ---
-
-    #[test]
-    fn chown_owner_and_group() {
-        assert_eq!(
-            format_chown(&Some("root".into()), &Some("wheel".into())),
-            "root:wheel"
-        );
-    }
-
-    #[test]
-    fn chown_owner_only() {
-        assert_eq!(format_chown(&Some("root".into()), &None), "root");
-    }
-
-    #[test]
-    fn chown_group_only() {
-        assert_eq!(format_chown(&None, &Some("wheel".into())), ":wheel");
-    }
-
-    #[test]
-    fn chown_opt_both_none_is_none() {
-        assert_eq!(format_chown_opt(&None, &None), None);
-    }
-
-    #[test]
-    fn chown_opt_with_owner_is_some() {
-        assert!(format_chown_opt(&Some("root".into()), &None).is_some());
-    }
-
-    // --- Deserialization ---
 
     #[test]
     fn default_is_empty() {
@@ -428,9 +396,9 @@ mod tests {
         let (target, entry) = entries.remove(0);
         assert_eq!(target, "/etc/motd");
         assert!(matches!(&entry.source, FileSource::Content(s) if s == "hello world"));
-        assert!(entry.owner.is_none());
-        assert!(entry.group.is_none());
-        assert!(entry.chmod.is_none());
+        assert!(entry.meta.owner.is_none());
+        assert!(entry.meta.group.is_none());
+        assert!(entry.meta.chmod.is_none());
     }
 
     #[test]
@@ -442,9 +410,9 @@ mod tests {
         .unwrap();
         let mut entries = field.value().unwrap();
         let (_, entry) = entries.remove(0);
-        assert_eq!(entry.owner.as_deref(), Some("root"));
-        assert_eq!(entry.group.as_deref(), Some("wheel"));
-        assert_eq!(entry.chmod.as_deref(), Some("644"));
+        assert_eq!(entry.meta.owner.as_deref(), Some("root"));
+        assert_eq!(entry.meta.group.as_deref(), Some("wheel"));
+        assert_eq!(entry.meta.chmod.as_deref(), Some("644"));
     }
 
     #[test]

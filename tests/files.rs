@@ -19,15 +19,15 @@ fn load_content_files_field() {
 
     let (target, entry) = &entries[0];
     assert_eq!(target, "/etc/motd");
-    assert!(entry.owner.is_none());
-    assert!(entry.group.is_none());
-    assert!(entry.chmod.is_none());
+    assert!(entry.meta.owner.is_none());
+    assert!(entry.meta.group.is_none());
+    assert!(entry.meta.chmod.is_none());
 
     let (target, entry) = &entries[1];
     assert_eq!(target, "/etc/sysconfig");
-    assert_eq!(entry.owner.as_deref(), Some("root"));
-    assert_eq!(entry.group.as_deref(), Some("wheel"));
-    assert_eq!(entry.chmod.as_deref(), Some("644"));
+    assert_eq!(entry.meta.owner.as_deref(), Some("root"));
+    assert_eq!(entry.meta.group.as_deref(), Some("wheel"));
+    assert_eq!(entry.meta.chmod.as_deref(), Some("644"));
 }
 
 #[test]
@@ -45,8 +45,8 @@ fn load_symlink_files_field() {
     let (target, entry) = entries.remove(0);
     assert_eq!(target, "/tmp/owned-link");
     assert!(matches!(entry.source, FileSource::Symlink(ref s) if s == "/real/path"));
-    assert_eq!(entry.owner.as_deref(), Some("user"));
-    assert_eq!(entry.group.as_deref(), Some("grp"));
+    assert_eq!(entry.meta.owner.as_deref(), Some("user"));
+    assert_eq!(entry.meta.group.as_deref(), Some("grp"));
 }
 
 #[test]
