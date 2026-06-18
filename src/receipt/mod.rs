@@ -1,5 +1,6 @@
 pub mod fields;
 
+mod alt;
 mod error;
 mod field;
 mod import;
@@ -9,6 +10,7 @@ mod map;
 mod receipt;
 mod unique;
 
+pub use alt::ReceiptAlt;
 pub use error::ReceiptError;
 pub use field::ReceiptField;
 pub use import::ReceiptImport;
