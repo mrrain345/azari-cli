@@ -1,7 +1,8 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
 use std::marker::PhantomData;
+use std::path::PathBuf;
 
 use merge::Merge;
 use serde::{
@@ -11,43 +12,72 @@ use serde::{
 
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
+use crate::receipt::path::current_path;
 
 /// A map field in a receipt file.
 ///
 /// Entries from every source are merged into a single ordered map in source order,
 /// preserving the order in which keys were added (imported receipts have precedence).
 /// `value()` returns `Err(FieldConflict)` if the same key appears more than once
-/// across all sources.
+/// across all sources, including the paths of the conflicting files.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReceiptMap<K = String, V = String> {
-    values: Vec<Vec<(K, V)>>,
+    values: Vec<(K, V, PathBuf)>,
 }
 
 impl<K, V> ReceiptMap<K, V> {
     pub fn new(values: Vec<(K, V)>) -> Self {
+        let path = current_path().unwrap_or_default();
         Self {
-            values: vec![values],
+            values: values
+                .into_iter()
+                .map(|(k, v)| (k, v, path.clone()))
+                .collect(),
         }
     }
 }
 
 impl<K, V> ReceiptField for ReceiptMap<K, V>
 where
-    K: Eq + Hash,
+    K: Eq + Hash + fmt::Display,
 {
     type Value = Vec<(K, V)>;
 
+    fn name() -> Option<&'static str> {
+        None
+    }
+
     /// Returns the merged ordered map across all sources.
-    /// Returns `Err(FieldConflict)` if any key appears more than once.
+    /// Returns `Err(FieldConflict)` if any key appears more than once, with the conflicting paths.
     fn value(self) -> Result<Self::Value, ReceiptError> {
-        let flat: Vec<(K, V)> = self.values.into_iter().flatten().collect();
-        let mut seen = HashSet::with_capacity(flat.len());
-        for (k, _) in &flat {
-            if !seen.insert(k) {
-                return Err(ReceiptError::FieldConflict);
-            }
+        if let Some(error) = self.error() {
+            Err(error)
+        } else {
+            Ok(self.values.into_iter().map(|(k, v, _)| (k, v)).collect())
         }
-        Ok(flat)
+    }
+
+    fn error(&self) -> Option<ReceiptError> {
+        let mut key_paths: HashMap<&K, Vec<&PathBuf>> = HashMap::new();
+
+        for (k, _, path) in &self.values {
+            key_paths.entry(k).or_default().push(path);
+        }
+
+        let errors: Vec<ReceiptError> = key_paths
+            .into_iter()
+            .filter(|(_, paths)| paths.len() > 1)
+            .map(|(k, paths)| ReceiptError::FieldConflict {
+                field: Some(k.to_string()),
+                paths: paths.into_iter().cloned().collect(),
+            })
+            .collect();
+
+        match errors.len() {
+            0 => None,
+            1 => errors.into_iter().next(),
+            _ => Some(ReceiptError::Aggregate(errors)),
+        }
     }
 }
 
@@ -137,7 +167,7 @@ where
 
 impl<K, V> Serialize for ReceiptMap<K, V>
 where
-    K: Serialize + Clone + Eq + Hash,
+    K: Serialize + Clone + Eq + Hash + fmt::Display,
     V: Serialize + Clone,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -188,7 +218,10 @@ mod tests {
     #[test]
     fn duplicate_key_within_single_source_is_conflict() {
         let map = ReceiptMap::new(pairs(&[("x", "1"), ("x", "2")]));
-        assert!(matches!(map.value(), Err(ReceiptError::FieldConflict)));
+        assert!(matches!(
+            map.value(),
+            Err(ReceiptError::FieldConflict { .. })
+        ));
     }
 
     // --- merge() ---
@@ -208,7 +241,17 @@ mod tests {
     fn merge_duplicate_key_across_sources_is_conflict() {
         let mut merged = ReceiptMap::new(pairs(&[("shared", "from-base")]));
         merged.merge(ReceiptMap::new(pairs(&[("shared", "from-root")])));
-        assert!(matches!(merged.value(), Err(ReceiptError::FieldConflict)));
+        assert!(matches!(
+            merged.value(),
+            Err(ReceiptError::FieldConflict { .. })
+        ));
+    }
+
+    #[test]
+    fn merge_multiple_duplicate_keys_is_aggregate() {
+        let mut merged = ReceiptMap::new(pairs(&[("a", "1"), ("b", "1")]));
+        merged.merge(ReceiptMap::new(pairs(&[("a", "2"), ("b", "2")])));
+        assert!(matches!(merged.value(), Err(ReceiptError::Aggregate(_))));
     }
 
     #[test]

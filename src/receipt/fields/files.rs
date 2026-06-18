@@ -5,7 +5,7 @@ use serde::{Deserialize, Deserializer};
 
 use crate::builder::{Build, Builder};
 use crate::receipt::error::ReceiptError;
-use crate::receipt::field::ReceiptField;
+use crate::receipt::field::{ReceiptField, rename_field_error};
 use crate::receipt::map::ReceiptMap;
 use crate::receipt::path::current_path;
 
@@ -48,8 +48,18 @@ pub struct FileMetadata {
 impl ReceiptField for FilesField {
     type Value = Vec<(String, FileEntry)>;
 
+    fn name() -> Option<&'static str> {
+        Some("files")
+    }
+
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
+    }
+
+    fn error(&self) -> Option<ReceiptError> {
+        rename_field_error(self.0.error(), |field| {
+            format!("files:\"{}\"", field.unwrap_or_default())
+        })
     }
 }
 
@@ -475,6 +485,9 @@ mod tests {
         let _guard2 = SourcePathGuard::push_path(p("/b.yaml"));
         let b: FilesField = serde_saphyr::from_str("/etc/same:\n  content: bbb\n").unwrap();
         merged.merge(b);
-        assert!(matches!(merged.value(), Err(ReceiptError::FieldConflict)));
+        assert!(matches!(
+            merged.value(),
+            Err(ReceiptError::FieldConflict { .. })
+        ));
     }
 }

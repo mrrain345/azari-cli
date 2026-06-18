@@ -177,11 +177,10 @@ fn files_from_imported_receipt_are_merged() {
 #[test]
 fn duplicate_file_path_across_imports_returns_error() {
     let path = files_dir().join("conflict-root.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let result = receipt.files.value();
+    let result = Receipt::from_file(&path);
 
     assert!(
-        matches!(result, Err(ReceiptError::FieldConflict)),
+        matches!(result, Err(ReceiptError::FieldConflict { .. })),
         "expected FieldConflict, got: {:?}",
         result
     );

@@ -4,7 +4,7 @@ use serde::Deserialize;
 use crate::builder::{Build, Builder};
 use crate::distro::UserConfig;
 use crate::receipt::error::ReceiptError;
-use crate::receipt::field::ReceiptField;
+use crate::receipt::field::{ReceiptField, rename_field_error};
 use crate::receipt::map::ReceiptMap;
 
 /// Describes a single user account to provision inside the container image.
@@ -41,8 +41,18 @@ pub struct UsersField(ReceiptMap<String, UserEntry>);
 impl ReceiptField for UsersField {
     type Value = Vec<(String, UserEntry)>;
 
+    fn name() -> Option<&'static str> {
+        Some("users")
+    }
+
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
+    }
+
+    fn error(&self) -> Option<ReceiptError> {
+        rename_field_error(self.0.error(), |field| {
+            format!("users:\"{}\"", field.unwrap_or_default())
+        })
     }
 }
 

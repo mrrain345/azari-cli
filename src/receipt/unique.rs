@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use merge::Merge;
 use serde::{
     de::{Deserialize, Deserializer},
@@ -6,44 +8,73 @@ use serde::{
 
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
+use crate::receipt::path::current_path;
 
 /// A receipt field where only one source may define a value.
-/// Multiple sources defining it results in a [`ReceiptError::FieldConflict`].
+/// Multiple sources defining it with different values results in a [`ReceiptError::FieldConflict`].
+/// Multiple sources defining the same value are silently deduplicated.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReceiptUnique<T = String> {
     values: Vec<T>,
+    paths: Vec<PathBuf>,
 }
 
 impl<T> ReceiptUnique<T> {
     pub fn new(value: T) -> Self {
+        let path = current_path().unwrap_or_default();
         Self {
             values: vec![value],
+            paths: vec![path],
         }
     }
 }
 
-impl<T> ReceiptField for ReceiptUnique<T> {
+impl<T: PartialEq> ReceiptField for ReceiptUnique<T> {
     type Value = Option<T>;
 
-    /// Returns `Err(FieldConflict)` if more than one source defined this field.
+    fn name() -> Option<&'static str> {
+        None
+    }
+
+    /// Returns the unique value if defined by at most one source,
+    /// or `Err(FieldConflict)` if multiple sources define different values.
     fn value(self) -> Result<Self::Value, ReceiptError> {
-        if self.values.len() > 1 {
-            return Err(ReceiptError::FieldConflict);
+        if let Some(error) = self.error() {
+            Err(error)
+        } else {
+            Ok(self.values.into_iter().next())
+        }
+    }
+
+    fn error(&self) -> Option<ReceiptError> {
+        if self.values.len() <= 1 {
+            return None;
         }
 
-        Ok(self.values.into_iter().next())
+        let first = &self.values[0];
+
+        if self.values.iter().all(|v| v == first) {
+            None
+        } else {
+            let paths = self.paths.clone();
+            Some(ReceiptError::FieldConflict { field: None, paths })
+        }
     }
 }
 
 impl<T> Merge for ReceiptUnique<T> {
     fn merge(&mut self, other: Self) {
         self.values.extend(other.values);
+        self.paths.extend(other.paths);
     }
 }
 
 impl<T> Default for ReceiptUnique<T> {
     fn default() -> Self {
-        Self { values: Vec::new() }
+        Self {
+            values: Vec::new(),
+            paths: Vec::new(),
+        }
     }
 }
 
@@ -66,7 +97,7 @@ where
 
 impl<T> Serialize for ReceiptUnique<T>
 where
-    T: Serialize + Clone,
+    T: PartialEq + Clone + Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

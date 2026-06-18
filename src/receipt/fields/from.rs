@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
 use crate::receipt::error::ReceiptError;
-use crate::receipt::field::ReceiptField;
+use crate::receipt::field::{ReceiptField, rename_field_error};
 use crate::receipt::unique::ReceiptUnique;
 
 /// Field for the `from` key.
@@ -17,8 +17,16 @@ pub struct FromField(ReceiptUnique<String>);
 impl ReceiptField for FromField {
     type Value = Option<String>;
 
+    fn name() -> Option<&'static str> {
+        Some("from")
+    }
+
     fn value(self) -> Result<Self::Value, ReceiptError> {
         self.0.value()
+    }
+
+    fn error(&self) -> Option<ReceiptError> {
+        rename_field_error(self.0.error(), |_| "from".to_string())
     }
 }
 

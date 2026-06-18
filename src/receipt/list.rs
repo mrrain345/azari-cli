@@ -13,24 +13,30 @@ use crate::receipt::field::ReceiptField;
 /// Multiple sources defining this field is not a conflict.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReceiptList<T = String> {
-    values: Vec<Vec<T>>,
+    values: Vec<T>,
 }
 
 impl<T> ReceiptList<T> {
     /// Creates a list field from a set of values.
     pub fn new(values: Vec<T>) -> Self {
-        Self {
-            values: vec![values],
-        }
+        Self { values }
     }
 }
 
 impl<T> ReceiptField for ReceiptList<T> {
     type Value = Vec<T>;
 
+    fn name() -> Option<&'static str> {
+        None
+    }
+
     /// Returns the merged list of values across all sources.
     fn value(self) -> Result<Self::Value, ReceiptError> {
-        Ok(self.values.into_iter().flatten().collect())
+        Ok(self.values)
+    }
+
+    fn error(&self) -> Option<ReceiptError> {
+        None
     }
 }
 
@@ -65,15 +71,12 @@ where
 
 impl<T> Serialize for ReceiptList<T>
 where
-    T: Serialize + Clone,
+    T: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        self.clone()
-            .value()
-            .map_err(serde::ser::Error::custom)?
-            .serialize(serializer)
+        self.values.serialize(serializer)
     }
 }

@@ -40,9 +40,17 @@ impl ReceiptImport {
 impl ReceiptField for ReceiptImport {
     type Value = Vec<PathBuf>;
 
+    fn name() -> Option<&'static str> {
+        Some("import")
+    }
+
     /// Imports (empty when full load completes).
     fn value(self) -> Result<Self::Value, ReceiptError> {
         Ok(self.imports)
+    }
+
+    fn error(&self) -> Option<ReceiptError> {
+        None
     }
 }
 

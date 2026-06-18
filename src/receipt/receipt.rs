@@ -5,6 +5,7 @@ use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
+use crate::receipt::ReceiptField;
 use crate::receipt::{
     ReceiptError, ReceiptImport,
     fields::{
@@ -51,9 +52,39 @@ impl Build for Receipt {
 }
 
 impl Receipt {
+    fn error(&self) -> Option<ReceiptError> {
+        let errors: Vec<ReceiptError> = vec![
+            self.distro.error(),
+            self.image.error(),
+            self.from.error(),
+            self.name.error(),
+            self.hostname.error(),
+            self.users.error(),
+            self.files.error(),
+            self.preinstall.error(),
+            self.packages.error(),
+            self.postinstall.error(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        match errors.len() {
+            0 => None,
+            1 => errors.into_iter().next(),
+            _ => Some(ReceiptError::Aggregate(errors)),
+        }
+    }
+
     pub fn from_file(path: &Path) -> Result<Self, ReceiptError> {
         let mut seen = HashSet::new();
-        Self::from_file_inner(path, &mut seen)
+        let receipt = Self::from_file_inner(path, &mut seen)?;
+
+        if let Some(error) = receipt.error() {
+            Err(error)
+        } else {
+            Ok(receipt)
+        }
     }
 
     fn from_file_inner(path: &Path, seen: &mut HashSet<PathBuf>) -> Result<Self, ReceiptError> {
