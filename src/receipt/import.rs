@@ -1,11 +1,10 @@
 use std::path::PathBuf;
 
+use merge::Merge;
 use serde::{
     de::{Deserialize, Deserializer},
     ser::{Serialize, Serializer},
 };
-
-use merge::Merge;
 
 use crate::receipt::ReceiptError;
 use crate::receipt::field::ReceiptField;
@@ -14,8 +13,7 @@ use crate::receipt::path::current_path;
 /// Import field state.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ReceiptImport {
-    pending: Vec<PathBuf>,
-    loaded: Vec<PathBuf>,
+    imports: Vec<PathBuf>,
 }
 
 impl ReceiptImport {
@@ -29,52 +27,37 @@ impl ReceiptImport {
             .map(|p| p.to_path_buf())
             .ok_or_else(|| ReceiptError::InvalidReceiptPath(source.clone()))?;
 
-        let mut pending = Vec::with_capacity(imports.len());
+        let mut resolved = Vec::with_capacity(imports.len());
         for p in imports {
-            let resolved = if p.is_absolute() { p } else { base_dir.join(p) };
-            pending.push(resolved.canonicalize()?);
+            let path = if p.is_absolute() { p } else { base_dir.join(p) };
+            resolved.push(path.canonicalize()?);
         }
 
-        Ok(Self {
-            pending,
-            loaded: Vec::new(),
-        })
-    }
-
-    /// Pops the next import to process and marks it as loaded.
-    /// Already loaded imports are skipped.
-    pub(crate) fn process_next_import(&mut self) -> Option<PathBuf> {
-        while !self.pending.is_empty() {
-            let path = self.pending.remove(0);
-            if self.loaded.iter().any(|p| p == &path) {
-                continue;
-            }
-            self.loaded.push(path.clone());
-            return Some(path);
-        }
-        None
+        Ok(Self { imports: resolved })
     }
 }
 
 impl ReceiptField for ReceiptImport {
     type Value = Vec<PathBuf>;
 
-    /// Pending imports (empty when full load completes).
+    /// Imports (empty when full load completes).
     fn value(self) -> Result<Self::Value, ReceiptError> {
-        Ok(self.pending)
+        Ok(self.imports)
     }
+}
 
+impl IntoIterator for ReceiptImport {
+    type Item = PathBuf;
+    type IntoIter = std::vec::IntoIter<PathBuf>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.imports.into_iter()
+    }
 }
 
 impl Merge for ReceiptImport {
     fn merge(&mut self, other: Self) {
-        self.pending.extend(other.pending);
-
-        for p in other.loaded {
-            if !self.loaded.iter().any(|x| x == &p) {
-                self.loaded.push(p);
-            }
-        }
+        self.imports.extend(other.imports);
     }
 }
 
@@ -84,7 +67,8 @@ impl<'de> Deserialize<'de> for ReceiptImport {
         D: Deserializer<'de>,
     {
         let imports = Option::<Vec<PathBuf>>::deserialize(deserializer)?.unwrap_or_default();
-        let source = current_path().expect("Current source path is not set");
+        let source = current_path()
+            .ok_or_else(|| serde::de::Error::custom("current source path is not set"))?;
         ReceiptImport::new(source, imports).map_err(serde::de::Error::custom)
     }
 }

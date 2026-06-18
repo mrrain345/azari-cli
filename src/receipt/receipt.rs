@@ -5,9 +5,8 @@ use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
-use crate::receipt::fields::ImportField;
 use crate::receipt::{
-    ReceiptError,
+    ReceiptError, ReceiptImport,
     fields::{
         DistroField, FilesField, FromField, HostnameField, ImageField, InstallField, NameField,
         PackagesField, UsersField,
@@ -18,8 +17,9 @@ use crate::receipt::{
 #[derive(Debug, Default, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct Receipt {
+    pub import: ReceiptImport,
+
     pub distro: DistroField,
-    pub import: ImportField,
     pub image: ImageField,
     pub from: FromField,
     pub name: NameField,
@@ -36,7 +36,6 @@ impl Build for Receipt {
         // `distro` must be built first — it populates `builder.distro`,
         // which other fields read from during their build step.
         self.distro.build(builder)?;
-        self.import.build(builder)?;
         self.image.build(builder)?;
         self.from.build(builder)?;
         self.name.build(builder)?;
@@ -67,7 +66,7 @@ impl Receipt {
         let mut current = Self::parse_single(&canonical)?;
         let mut base = Self::default();
 
-        while let Some(next) = current.import.process_next_import() {
+        for next in std::mem::take(&mut current.import) {
             let imported = Self::from_file_inner(&next, seen)?;
             base.merge(imported);
         }

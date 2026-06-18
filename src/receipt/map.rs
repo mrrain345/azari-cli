@@ -1,12 +1,13 @@
+use std::collections::HashSet;
 use std::fmt;
+use std::hash::Hash;
 use std::marker::PhantomData;
 
+use merge::Merge;
 use serde::{
     de::{Deserialize, Deserializer, MapAccess, Visitor},
     ser::{Serialize, SerializeMap, Serializer},
 };
-
-use merge::Merge;
 
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
@@ -32,7 +33,7 @@ impl<K, V> ReceiptMap<K, V> {
 
 impl<K, V> ReceiptField for ReceiptMap<K, V>
 where
-    K: Eq,
+    K: Eq + Hash,
 {
     type Value = Vec<(K, V)>;
 
@@ -40,11 +41,10 @@ where
     /// Returns `Err(FieldConflict)` if any key appears more than once.
     fn value(self) -> Result<Self::Value, ReceiptError> {
         let flat: Vec<(K, V)> = self.values.into_iter().flatten().collect();
-        for i in 0..flat.len() {
-            for j in (i + 1)..flat.len() {
-                if flat[i].0 == flat[j].0 {
-                    return Err(ReceiptError::FieldConflict);
-                }
+        let mut seen = HashSet::with_capacity(flat.len());
+        for (k, _) in &flat {
+            if !seen.insert(k) {
+                return Err(ReceiptError::FieldConflict);
             }
         }
         Ok(flat)
@@ -137,7 +137,7 @@ where
 
 impl<K, V> Serialize for ReceiptMap<K, V>
 where
-    K: Serialize + Clone + Eq,
+    K: Serialize + Clone + Eq + Hash,
     V: Serialize + Clone,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

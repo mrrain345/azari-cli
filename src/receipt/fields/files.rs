@@ -158,7 +158,8 @@ impl<'de> Deserialize<'de> for FileEntry {
         let source = match (raw.content, raw.path, raw.symlink) {
             (Some(content), None, None) => FileSource::Content(content),
             (None, Some(path), None) => {
-                let source_file = current_path().expect("Current source path is not set");
+                let source_file = current_path()
+                    .ok_or_else(|| serde::de::Error::custom("current source path is not set"))?;
                 let base = source_file
                     .parent()
                     .unwrap_or_else(|| std::path::Path::new("."));

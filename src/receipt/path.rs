@@ -58,7 +58,7 @@ impl Drop for SourcePathGuard {
     fn drop(&mut self) {
         PATH_STACK.with(|s| {
             let mut stack = s.borrow_mut();
-            assert_eq!(
+            debug_assert_eq!(
                 stack.len(),
                 self.depth,
                 "SourcePathGuard dropped out of order: expected stack depth {}, found {}.",

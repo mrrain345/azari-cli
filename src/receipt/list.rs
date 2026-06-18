@@ -1,9 +1,8 @@
+use merge::Merge;
 use serde::{
     de::{Deserialize, Deserializer},
     ser::{Serialize, Serializer},
 };
-
-use merge::Merge;
 
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
