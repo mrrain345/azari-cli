@@ -1,8 +1,5 @@
 use merge::Merge;
-use serde::{
-    de::{Deserialize, Deserializer},
-    ser::{Serialize, Serializer},
-};
+use serde::{Deserialize, Serialize};
 
 use crate::receipt::error::ReceiptError;
 use crate::receipt::field::ReceiptField;
@@ -11,15 +8,12 @@ use crate::receipt::field::ReceiptField;
 ///
 /// Items from every source are merged into a single flat list in source order.
 /// Multiple sources defining this field is not a conflict.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ReceiptList<T = String> {
-    values: Vec<T>,
-}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReceiptList<T = String>(Vec<T>);
 
 impl<T> ReceiptList<T> {
-    /// Creates a list field from a set of values.
     pub fn new(values: Vec<T>) -> Self {
-        Self { values }
+        Self(values)
     }
 }
 
@@ -30,9 +24,8 @@ impl<T> ReceiptField for ReceiptList<T> {
         None
     }
 
-    /// Returns the merged list of values across all sources.
     fn value(self) -> Result<Self::Value, ReceiptError> {
-        Ok(self.values)
+        Ok(self.0)
     }
 
     fn error(&self) -> Option<ReceiptError> {
@@ -42,41 +35,12 @@ impl<T> ReceiptField for ReceiptList<T> {
 
 impl<T> Merge for ReceiptList<T> {
     fn merge(&mut self, other: Self) {
-        self.values.extend(other.values);
+        self.0.extend(other.0);
     }
 }
 
 impl<T> Default for ReceiptList<T> {
     fn default() -> Self {
-        Self { values: Vec::new() }
-    }
-}
-
-impl<'de, T> Deserialize<'de> for ReceiptList<T>
-where
-    T: Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let opt = Option::<Vec<T>>::deserialize(deserializer)?;
-
-        Ok(match opt {
-            Some(values) => ReceiptList::new(values),
-            None => ReceiptList::default(),
-        })
-    }
-}
-
-impl<T> Serialize for ReceiptList<T>
-where
-    T: Serialize,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.values.serialize(serializer)
+        Self(Vec::new())
     }
 }
