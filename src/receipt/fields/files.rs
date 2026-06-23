@@ -199,7 +199,7 @@ impl<'de> Deserialize<'de> for FileEntry {
 /// All characters that are not alphanumeric, `.`, or `-` are replaced with `_`.
 ///
 /// `/etc/host name` → `etc_host_name`
-fn target_to_filename(target: &str) -> String {
+pub(crate) fn target_to_filename(target: &str) -> String {
     let stripped = target.trim_start_matches('/');
     stripped
         .chars()

@@ -44,3 +44,15 @@ impl<T> Default for ReceiptList<T> {
         Self(Vec::new())
     }
 }
+
+impl<T> From<Vec<T>> for ReceiptList<T> {
+    fn from(values: Vec<T>) -> Self {
+        Self(values)
+    }
+}
+
+impl<T> From<T> for ReceiptList<T> {
+    fn from(value: T) -> Self {
+        Self(vec![value])
+    }
+}

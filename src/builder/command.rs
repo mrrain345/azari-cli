@@ -56,7 +56,8 @@ pub(crate) fn podman_build(
     cmd.arg(build_dir).current_dir(build_dir);
 
     if dry {
-        println!("Build command:\n{cmd:?}");
+        // println!("Build command:\n{cmd:?}");
+        println!("Build dir: `{}`", build_dir.display());
         builder.push(format!("\n# Build command:\n# {cmd:?}"));
         builder.write_containerfile()?;
         return Ok(());
