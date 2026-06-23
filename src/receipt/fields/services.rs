@@ -104,6 +104,8 @@ pub struct ServiceEntry {
     pub user: Option<bool>,
     /// Content of the `.service` unit file.
     pub service: Option<ServiceUnitFile>,
+    /// Content of the `.socket` unit file.
+    pub socket: Option<SocketUnitFile>,
 }
 
 // ---- Unit-file structs ----
@@ -117,9 +119,21 @@ pub struct ServiceUnitFile {
     pub install: Option<InstallSection>,
 }
 
+/// Content for a `.socket` unit file.
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct SocketUnitFile {
+    /// Whether to enable this socket unit. Not written to the unit file.
+    #[serde(skip_serializing)]
+    pub enabled: Option<bool>,
+    pub unit: Option<UnitSection>,
+    pub socket: Option<SocketSection>,
+    pub install: Option<InstallSection>,
+}
+
 // ---- Sections ----
 
-/// `[Unit]` section for `.service` unit files.
+/// `[Unit]` section shared by unit files.
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct UnitSection {
@@ -164,7 +178,7 @@ pub struct ServiceSection {
     pub extra: IniExtra,
 }
 
-/// `[Install]` section for `.service` unit files.
+/// `[Install]` section shared by unit files.
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct InstallSection {
@@ -177,31 +191,109 @@ pub struct InstallSection {
     pub extra: IniExtra,
 }
 
+/// `[Socket]` section of a `.socket` unit file.
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct SocketSection {
+    /// Filesystem path or address to listen on.
+    pub listen_stream: Option<String>,
+    /// Octal permission mode for the socket node (e.g. `0660`).
+    pub socket_mode: Option<serde_value::Value>,
+    /// User that owns the socket node.
+    pub socket_user: Option<String>,
+    /// Group that owns the socket node.
+    pub socket_group: Option<String>,
+    /// Less-common `[Socket]` directives not listed above.
+    #[serde(flatten)]
+    pub extra: IniExtra,
+}
+
 // ---- Build implementation ----
 
 fn build_entry(builder: &mut Builder, name: &str, entry: ServiceEntry) -> Result<(), ReceiptError> {
     let enabled = entry.enabled.unwrap_or(false);
     let is_user = entry.user.unwrap_or(false);
-    let filename = format!("{name}.service");
 
-    let unit_dir = if is_user {
+    build_service_entry(builder, name, enabled, is_user, entry.service)?;
+    build_socket_entry(builder, name, is_user, entry.socket)?;
+
+    Ok(())
+}
+
+fn unit_dir(is_user: bool) -> &'static str {
+    if is_user {
         "/usr/lib/systemd/user"
     } else {
         "/usr/lib/systemd/system"
-    };
+    }
+}
 
-    if let Some(unit_file) = entry.service {
-        let content = render_unit_file(&unit_file)?;
-        let unit_path = target_to_filename(&format!("{unit_dir}/{filename}"));
-        std::fs::write(builder.build_dir().join(&unit_path), &content)?;
-        builder.push(format!("COPY {unit_path} {unit_dir}/{filename}"));
+fn enable_unit(builder: &mut Builder, unit_name: &str, is_user: bool) {
+    if is_user {
+        builder.push(format!("RUN systemctl --global enable {unit_name}"));
+    } else {
+        builder.push(format!("RUN systemctl enable {unit_name}"));
+    }
+}
+
+fn make_unit_file(
+    builder: &mut Builder,
+    unit_name: &str,
+    is_user: bool,
+    content: &str,
+) -> Result<(), ReceiptError> {
+    let unit_dir = unit_dir(is_user);
+    let unit_path = target_to_filename(&format!("{unit_dir}/{unit_name}"));
+    std::fs::write(builder.build_dir().join(&unit_path), content)?;
+    builder.push(format!("COPY {unit_path} {unit_dir}/{unit_name}"));
+    Ok(())
+}
+
+fn build_service_entry(
+    builder: &mut Builder,
+    name: &str,
+    enabled: bool,
+    is_user: bool,
+    service: Option<ServiceUnitFile>,
+) -> Result<(), ReceiptError> {
+    let unit_name = &format!("{name}.service");
+
+    if let Some(unit_file) = service {
+        make_unit_file(builder, unit_name, is_user, &render_unit_file(&unit_file)?)?;
     }
 
     if enabled {
-        if is_user {
-            builder.push(format!("RUN systemctl --global enable {filename}"));
-        } else {
-            builder.push(format!("RUN systemctl enable {filename}"));
+        enable_unit(builder, unit_name, is_user);
+    }
+
+    Ok(())
+}
+
+fn build_socket_entry(
+    builder: &mut Builder,
+    name: &str,
+    is_user: bool,
+    socket: Option<SocketUnitFile>,
+) -> Result<(), ReceiptError> {
+    if let Some(socket_unit) = socket {
+        let enabled = socket_unit.enabled.unwrap_or(false);
+        let unit_name = &format!("{name}.socket");
+
+        let has_sections = socket_unit.unit.is_some()
+            || socket_unit.socket.is_some()
+            || socket_unit.install.is_some();
+
+        if has_sections {
+            make_unit_file(
+                builder,
+                unit_name,
+                is_user,
+                &render_unit_file(&socket_unit)?,
+            )?;
+        }
+
+        if enabled {
+            enable_unit(builder, unit_name, is_user);
         }
     }
 
