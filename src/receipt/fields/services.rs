@@ -108,6 +108,8 @@ pub struct ServiceEntry {
     pub socket: Option<SocketUnitFile>,
     /// Content of the `.timer` unit file.
     pub timer: Option<TimerUnitFile>,
+    /// Content of the `.path` unit file.
+    pub path: Option<PathUnitFile>,
 }
 
 // ---- Unit-file structs ----
@@ -142,6 +144,18 @@ pub struct TimerUnitFile {
     pub enabled: Option<bool>,
     pub unit: Option<UnitSection>,
     pub timer: Option<TimerSection>,
+    pub install: Option<InstallSection>,
+}
+
+/// Content for a `.path` unit file.
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct PathUnitFile {
+    /// Whether to enable this path unit. Not written to the unit file.
+    #[serde(skip_serializing)]
+    pub enabled: Option<bool>,
+    pub unit: Option<UnitSection>,
+    pub path: Option<PathSection>,
     pub install: Option<InstallSection>,
 }
 
@@ -232,6 +246,8 @@ pub struct TimerSection {
     pub on_boot_sec: Option<serde_value::Value>,
     /// Delay relative to timer activation.
     pub on_active_sec: Option<serde_value::Value>,
+    /// Delay relative to timer start.
+    pub on_start_sec: Option<serde_value::Value>,
     /// Delay relative to the last activation of the linked unit.
     pub on_unit_active_sec: Option<serde_value::Value>,
     /// Delay relative to the last deactivation of the linked unit.
@@ -240,9 +256,24 @@ pub struct TimerSection {
     pub persistent: Option<bool>,
     /// Add a random delay to spread load.
     pub randomized_delay_sec: Option<serde_value::Value>,
-    /// Link the timer to a specific unit name.
-    pub unit: Option<String>,
     /// Less-common `[Timer]` directives not listed above.
+    #[serde(flatten)]
+    pub extra: IniExtra,
+}
+
+/// `[Path]` section of a `.path` unit file.
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct PathSection {
+    /// Trigger when a path appears.
+    pub path_exists: IniMulti<String>,
+    /// Trigger when a glob matches an existing path.
+    pub path_exists_glob: IniMulti<String>,
+    /// Trigger when a path's metadata changes.
+    pub path_changed: IniMulti<String>,
+    /// Trigger when a path's contents change.
+    pub path_modified: IniMulti<String>,
+    /// Less-common `[Path]` directives not listed above.
     #[serde(flatten)]
     pub extra: IniExtra,
 }
@@ -256,6 +287,7 @@ fn build_entry(builder: &mut Builder, name: &str, entry: ServiceEntry) -> Result
     build_service_entry(builder, name, enabled, is_user, entry.service)?;
     build_socket_entry(builder, name, is_user, entry.socket)?;
     build_timer_entry(builder, name, is_user, entry.timer)?;
+    build_path_entry(builder, name, is_user, entry.path)?;
 
     Ok(())
 }
@@ -298,8 +330,8 @@ fn build_service_entry(
 ) -> Result<(), ReceiptError> {
     let unit_name = &format!("{name}.service");
 
-    if let Some(unit_file) = service {
-        make_unit_file(builder, unit_name, is_user, &render_unit_file(&unit_file)?)?;
+    if let Some(unit) = service {
+        make_unit_file(builder, unit_name, is_user, &render_unit_file(&unit)?)?;
     }
 
     if enabled {
@@ -315,21 +347,14 @@ fn build_socket_entry(
     is_user: bool,
     socket: Option<SocketUnitFile>,
 ) -> Result<(), ReceiptError> {
-    if let Some(socket_unit) = socket {
-        let enabled = socket_unit.enabled.unwrap_or(false);
+    if let Some(unit) = socket {
+        let enabled = unit.enabled.unwrap_or(false);
         let unit_name = &format!("{name}.socket");
 
-        let has_sections = socket_unit.unit.is_some()
-            || socket_unit.socket.is_some()
-            || socket_unit.install.is_some();
+        let has_sections = unit.unit.is_some() || unit.socket.is_some() || unit.install.is_some();
 
         if has_sections {
-            make_unit_file(
-                builder,
-                unit_name,
-                is_user,
-                &render_unit_file(&socket_unit)?,
-            )?;
+            make_unit_file(builder, unit_name, is_user, &render_unit_file(&unit)?)?;
         }
 
         if enabled {
@@ -346,16 +371,38 @@ fn build_timer_entry(
     is_user: bool,
     timer: Option<TimerUnitFile>,
 ) -> Result<(), ReceiptError> {
-    if let Some(timer_unit) = timer {
-        let enabled = timer_unit.enabled.unwrap_or(false);
+    if let Some(unit) = timer {
+        let enabled = unit.enabled.unwrap_or(false);
         let unit_name = &format!("{name}.timer");
 
-        let has_sections = timer_unit.unit.is_some()
-            || timer_unit.timer.is_some()
-            || timer_unit.install.is_some();
+        let has_sections = unit.unit.is_some() || unit.timer.is_some() || unit.install.is_some();
 
         if has_sections {
-            make_unit_file(builder, unit_name, is_user, &render_unit_file(&timer_unit)?)?;
+            make_unit_file(builder, unit_name, is_user, &render_unit_file(&unit)?)?;
+        }
+
+        if enabled {
+            enable_unit(builder, unit_name, is_user);
+        }
+    }
+
+    Ok(())
+}
+
+fn build_path_entry(
+    builder: &mut Builder,
+    name: &str,
+    is_user: bool,
+    path: Option<PathUnitFile>,
+) -> Result<(), ReceiptError> {
+    if let Some(unit) = path {
+        let enabled = unit.enabled.unwrap_or(false);
+        let unit_name = &format!("{name}.path");
+
+        let has_sections = unit.unit.is_some() || unit.path.is_some() || unit.install.is_some();
+
+        if has_sections {
+            make_unit_file(builder, unit_name, is_user, &render_unit_file(&unit)?)?;
         }
 
         if enabled {
