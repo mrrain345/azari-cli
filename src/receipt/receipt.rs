@@ -10,7 +10,7 @@ use crate::receipt::{
     ReceiptError, ReceiptImport,
     fields::{
         DistroField, FilesField, FromField, HostnameField, ImageField, InstallField, NameField,
-        PackagesField, ServicesField, UsersField,
+        PackagesField, SystemdField, UsersField,
     },
     path::SourcePathGuard,
 };
@@ -30,7 +30,7 @@ pub struct Receipt {
     pub preinstall: InstallField,
     pub packages: PackagesField,
     pub postinstall: InstallField,
-    pub services: ServicesField,
+    pub systemd: SystemdField,
 }
 
 impl Build for Receipt {
@@ -47,7 +47,7 @@ impl Build for Receipt {
         self.preinstall.build(builder)?;
         self.packages.build(builder)?;
         self.postinstall.build(builder)?;
-        self.services.build(builder)?;
+        self.systemd.build(builder)?;
 
         Ok(())
     }
@@ -66,7 +66,7 @@ impl Receipt {
             self.preinstall.error(),
             self.packages.error(),
             self.postinstall.error(),
-            self.services.error(),
+            self.systemd.error(),
         ]
         .into_iter()
         .flatten()

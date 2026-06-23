@@ -6,7 +6,7 @@ mod image;
 mod install;
 mod name;
 mod packages;
-mod services;
+mod systemd;
 mod users;
 
 pub use distro::DistroField;
@@ -17,5 +17,5 @@ pub use image::ImageField;
 pub use install::InstallField;
 pub use name::NameField;
 pub use packages::PackagesField;
-pub use services::ServicesField;
+pub use systemd::SystemdField;
 pub use users::UsersField;
