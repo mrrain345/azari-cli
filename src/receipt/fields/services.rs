@@ -110,6 +110,8 @@ pub struct ServiceEntry {
     pub timer: Option<TimerUnitFile>,
     /// Content of the `.path` unit file.
     pub path: Option<PathUnitFile>,
+    /// Content of the `.target` unit file.
+    pub target: Option<TargetUnitFile>,
 }
 
 // ---- Unit-file structs ----
@@ -144,6 +146,19 @@ pub struct TimerUnitFile {
     pub enabled: Option<bool>,
     pub unit: Option<UnitSection>,
     pub timer: Option<TimerSection>,
+    pub install: Option<InstallSection>,
+}
+
+/// Content for a `.target` unit file.
+///
+/// Target units have no dedicated section beyond `[Unit]` and `[Install]`.
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default, rename_all = "kebab-case")]
+pub struct TargetUnitFile {
+    /// Whether to enable this target unit. Not written to the unit file.
+    #[serde(skip_serializing)]
+    pub enabled: Option<bool>,
+    pub unit: Option<UnitSection>,
     pub install: Option<InstallSection>,
 }
 
@@ -288,6 +303,7 @@ fn build_entry(builder: &mut Builder, name: &str, entry: ServiceEntry) -> Result
     build_socket_entry(builder, name, is_user, entry.socket)?;
     build_timer_entry(builder, name, is_user, entry.timer)?;
     build_path_entry(builder, name, is_user, entry.path)?;
+    build_target_entry(builder, name, is_user, entry.target)?;
 
     Ok(())
 }
@@ -400,6 +416,30 @@ fn build_path_entry(
         let unit_name = &format!("{name}.path");
 
         let has_sections = unit.unit.is_some() || unit.path.is_some() || unit.install.is_some();
+
+        if has_sections {
+            make_unit_file(builder, unit_name, is_user, &render_unit_file(&unit)?)?;
+        }
+
+        if enabled {
+            enable_unit(builder, unit_name, is_user);
+        }
+    }
+
+    Ok(())
+}
+
+fn build_target_entry(
+    builder: &mut Builder,
+    name: &str,
+    is_user: bool,
+    target: Option<TargetUnitFile>,
+) -> Result<(), ReceiptError> {
+    if let Some(unit) = target {
+        let enabled = unit.enabled.unwrap_or(false);
+        let unit_name = &format!("{name}.target");
+
+        let has_sections = unit.unit.is_some() || unit.install.is_some();
 
         if has_sections {
             make_unit_file(builder, unit_name, is_user, &render_unit_file(&unit)?)?;
