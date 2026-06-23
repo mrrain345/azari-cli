@@ -12,11 +12,11 @@ use crate::receipt::path::current_path;
 
 /// Import field state.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct ReceiptImport {
+pub struct ImportField {
     imports: Vec<PathBuf>,
 }
 
-impl ReceiptImport {
+impl ImportField {
     /// Creates import state from one source receipt and raw `import` entries.
     /// Relative paths are resolved against the source receipt directory.
     pub fn new(source: PathBuf, imports: Vec<PathBuf>) -> Result<Self, ReceiptError> {
@@ -37,7 +37,7 @@ impl ReceiptImport {
     }
 }
 
-impl ReceiptField for ReceiptImport {
+impl ReceiptField for ImportField {
     type Value = Vec<PathBuf>;
 
     fn name() -> Option<&'static str> {
@@ -54,7 +54,7 @@ impl ReceiptField for ReceiptImport {
     }
 }
 
-impl IntoIterator for ReceiptImport {
+impl IntoIterator for ImportField {
     type Item = PathBuf;
     type IntoIter = std::vec::IntoIter<PathBuf>;
 
@@ -63,13 +63,13 @@ impl IntoIterator for ReceiptImport {
     }
 }
 
-impl Merge for ReceiptImport {
+impl Merge for ImportField {
     fn merge(&mut self, other: Self) {
         self.imports.extend(other.imports);
     }
 }
 
-impl<'de> Deserialize<'de> for ReceiptImport {
+impl<'de> Deserialize<'de> for ImportField {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -77,11 +77,11 @@ impl<'de> Deserialize<'de> for ReceiptImport {
         let imports = Option::<Vec<PathBuf>>::deserialize(deserializer)?.unwrap_or_default();
         let source = current_path()
             .ok_or_else(|| serde::de::Error::custom("current source path is not set"))?;
-        ReceiptImport::new(source, imports).map_err(serde::de::Error::custom)
+        ImportField::new(source, imports).map_err(serde::de::Error::custom)
     }
 }
 
-impl Serialize for ReceiptImport {
+impl Serialize for ImportField {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,

@@ -6,19 +6,12 @@ use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
 use crate::receipt::ReceiptField;
-use crate::receipt::{
-    ReceiptError, ReceiptImport,
-    fields::{
-        DistroField, FilesField, FromField, HostnameField, ImageField, InstallField, NameField,
-        PackagesField, SystemdField, UsersField,
-    },
-    path::SourcePathGuard,
-};
+use crate::receipt::{ReceiptError, fields::*, path::SourcePathGuard};
 
 #[derive(Debug, Default, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct Receipt {
-    pub import: ReceiptImport,
+    pub import: ImportField,
 
     pub distro: DistroField,
     pub image: ImageField,
