@@ -21,4 +21,4 @@ pub use packages::PackagesField;
 pub use users::UsersField;
 
 // Re-export SystemdField from the new systemd module location
-pub use crate::receipt::systemd::SystemdField;
+pub use crate::recipe::systemd::SystemdField;

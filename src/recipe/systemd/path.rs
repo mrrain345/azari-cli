@@ -1,5 +1,5 @@
 use crate::ini::{IniExtra, IniMulti};
-use crate::receipt::systemd::unit::{InstallSection, SystemdUnit, UnitSection};
+use crate::recipe::systemd::unit::{InstallSection, SystemdUnit, UnitSection};
 use serde::{Deserialize, Serialize};
 
 /// Content for a `.path` unit file.

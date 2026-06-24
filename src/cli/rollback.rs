@@ -1,7 +1,7 @@
 use clap::Args;
 
 use crate::builder::command::bootc_rollback;
-use crate::receipt::ReceiptError;
+use crate::recipe::RecipeError;
 
 use super::Cli;
 
@@ -10,7 +10,7 @@ use super::Cli;
 pub struct RollbackArgs {}
 
 impl RollbackArgs {
-    pub fn run(&self, _cli: &Cli) -> Result<(), ReceiptError> {
+    pub fn run(&self, _cli: &Cli) -> Result<(), RecipeError> {
         bootc_rollback()
     }
 }

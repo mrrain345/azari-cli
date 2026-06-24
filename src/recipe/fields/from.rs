@@ -2,9 +2,9 @@ use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
-use crate::receipt::error::ReceiptError;
-use crate::receipt::field::{ReceiptField, rename_field_error};
-use crate::receipt::unique::ReceiptUnique;
+use crate::recipe::error::RecipeError;
+use crate::recipe::field::{RecipeField, rename_field_error};
+use crate::recipe::unique::RecipeUnique;
 
 /// Field for the `from` key.
 ///
@@ -12,26 +12,26 @@ use crate::receipt::unique::ReceiptUnique;
 /// used instead. Emits the `FROM` instruction.
 #[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
-pub struct FromField(ReceiptUnique<String>);
+pub struct FromField(RecipeUnique<String>);
 
-impl ReceiptField for FromField {
+impl RecipeField for FromField {
     type Value = Option<String>;
 
     fn name() -> Option<&'static str> {
         Some("from")
     }
 
-    fn value(self) -> Result<Self::Value, ReceiptError> {
+    fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }
 
-    fn error(&self) -> Option<ReceiptError> {
+    fn error(&self) -> Option<RecipeError> {
         rename_field_error(self.0.error(), |_| "from".to_string())
     }
 }
 
 impl Build for FromField {
-    fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
+    fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
         let distro = builder.distro()?;
         let image = self
             .value()?

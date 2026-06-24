@@ -11,7 +11,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// Serializes as a sequence, which the INI serializer renders as repeated
 /// `Key=value` lines with the same key.
 ///
-/// Values from multiple receipt imports are merged by extending.
+/// Values from multiple recipe imports are merged by extending.
 ///
 /// # Example
 /// ```yaml

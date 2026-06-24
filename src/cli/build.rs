@@ -5,11 +5,11 @@ use clap::Args;
 use crate::builder::command::{podman_build, podman_push};
 use crate::builder::utils::{clear_tmp_dir, user_tmp_dir};
 use crate::builder::{Builder, BuilderOptions};
-use crate::receipt::{Receipt, ReceiptError};
+use crate::recipe::{Recipe, RecipeError};
 
 use super::Cli;
 
-/// Build the receipt
+/// Build the recipe
 #[derive(Debug, Args)]
 pub struct BuildArgs {
     /// Version tag for the image (e.g. `1.0.0`).
@@ -20,7 +20,7 @@ pub struct BuildArgs {
     #[arg(short = 'p', long)]
     pub push: bool,
 
-    /// Override the image name from the receipt (e.g. `ghcr.io/user/image`).
+    /// Override the image name from the recipe (e.g. `ghcr.io/user/image`).
     #[arg(short = 'i', long, value_name = "IMAGE")]
     pub image: Option<String>,
 
@@ -42,16 +42,16 @@ pub struct BuildArgs {
 }
 
 impl BuildArgs {
-    pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
+    pub fn run(&self, cli: &Cli) -> Result<(), RecipeError> {
         // TODO: Remove the need for `cli`, consume self
 
         handle_tmp_cleanup();
 
-        let path = cli.receipt_path()?;
-        let receipt = Receipt::from_file(&path)?;
+        let path = cli.recipe_path()?;
+        let recipe = Recipe::from_file(&path)?;
 
-        let mut builder = Builder::from_receipt_with(
-            receipt,
+        let mut builder = Builder::from_recipe_with(
+            recipe,
             BuilderOptions {
                 version: self.version.clone(),
                 build_dir: self.build_dir.clone(),

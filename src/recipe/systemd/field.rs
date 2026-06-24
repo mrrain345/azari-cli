@@ -2,12 +2,12 @@ use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
-use crate::receipt::ReceiptAlt;
-use crate::receipt::error::ReceiptError;
-use crate::receipt::field::{ReceiptField, rename_field_error};
-use crate::receipt::map::ReceiptMap;
-use crate::receipt::systemd::ServiceUnit;
-use crate::receipt::systemd::entry::SystemdEntry;
+use crate::recipe::RecipeAlt;
+use crate::recipe::error::RecipeError;
+use crate::recipe::field::{RecipeField, rename_field_error};
+use crate::recipe::map::RecipeMap;
+use crate::recipe::systemd::ServiceUnit;
+use crate::recipe::systemd::entry::SystemdEntry;
 
 /// Field for the `systemd` key.
 ///
@@ -38,20 +38,20 @@ use crate::receipt::systemd::entry::SystemdEntry;
 /// ```
 #[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
-pub struct SystemdField(ReceiptAlt<Vec<String>, ReceiptMap<String, SystemdEntry>>);
+pub struct SystemdField(RecipeAlt<Vec<String>, RecipeMap<String, SystemdEntry>>);
 
-impl ReceiptField for SystemdField {
+impl RecipeField for SystemdField {
     type Value = Vec<(String, SystemdEntry)>;
 
     fn name() -> Option<&'static str> {
         Some("systemd")
     }
 
-    fn value(self) -> Result<Self::Value, ReceiptError> {
+    fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }
 
-    fn error(&self) -> Option<ReceiptError> {
+    fn error(&self) -> Option<RecipeError> {
         rename_field_error(self.0.error(), |field| {
             format!("systemd:\"{}\"", field.unwrap_or_default())
         })
@@ -59,7 +59,7 @@ impl ReceiptField for SystemdField {
 }
 
 impl Build for SystemdField {
-    fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
+    fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
         for (name, entry) in self.value()? {
             entry.build(builder, &name)?;
         }
@@ -67,11 +67,11 @@ impl Build for SystemdField {
     }
 }
 
-/// Converts a flat list of service names into a `ReceiptMap` where each
+/// Converts a flat list of service names into a `RecipeMap` where each
 /// service is enabled with no explicit unit file.
-impl From<Vec<String>> for ReceiptMap<String, SystemdEntry> {
+impl From<Vec<String>> for RecipeMap<String, SystemdEntry> {
     fn from(names: Vec<String>) -> Self {
-        ReceiptMap::new(
+        RecipeMap::new(
             names
                 .into_iter()
                 .map(|name| {

@@ -4,10 +4,10 @@ use merge::Merge;
 use serde::{Deserialize, Deserializer};
 
 use crate::builder::{Build, Builder};
-use crate::receipt::error::ReceiptError;
-use crate::receipt::field::{ReceiptField, rename_field_error};
-use crate::receipt::map::ReceiptMap;
-use crate::receipt::path::current_path;
+use crate::recipe::error::RecipeError;
+use crate::recipe::field::{RecipeField, rename_field_error};
+use crate::recipe::map::RecipeMap;
+use crate::recipe::path::current_path;
 
 /// Field for the `files` key.
 ///
@@ -16,7 +16,7 @@ use crate::receipt::path::current_path;
 /// and optional `owner`, `group`, and `chmod` attributes.
 #[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
-pub struct FilesField(ReceiptMap<String, FileEntry>);
+pub struct FilesField(RecipeMap<String, FileEntry>);
 
 /// Describes a single file to be placed in the container image.
 #[derive(Debug)]
@@ -28,10 +28,10 @@ pub struct FileEntry {
 /// The source of a file's content in a [`FilesField`] entry.
 #[derive(Debug)]
 pub enum FileSource {
-    /// Inline file content written directly in the receipt.
+    /// Inline file content written directly in the recipe.
     Content(String),
     /// Path to an existing file to be copied into the build directory.
-    /// Resolved relative to the receipt file that defines it.
+    /// Resolved relative to the recipe file that defines it.
     Path(PathBuf),
     /// Symlink target path inside the image.
     Symlink(String),
@@ -45,18 +45,18 @@ pub struct FileMetadata {
     pub chmod: Option<String>,
 }
 
-impl ReceiptField for FilesField {
+impl RecipeField for FilesField {
     type Value = Vec<(String, FileEntry)>;
 
     fn name() -> Option<&'static str> {
         Some("files")
     }
 
-    fn value(self) -> Result<Self::Value, ReceiptError> {
+    fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }
 
-    fn error(&self) -> Option<ReceiptError> {
+    fn error(&self) -> Option<RecipeError> {
         rename_field_error(self.0.error(), |field| {
             format!("files:\"{}\"", field.unwrap_or_default())
         })
@@ -64,7 +64,7 @@ impl ReceiptField for FilesField {
 }
 
 impl Build for FilesField {
-    fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
+    fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
         for (target, entry) in self.value()? {
             build_entry(builder, &target, entry)?;
         }
@@ -73,7 +73,7 @@ impl Build for FilesField {
     }
 }
 
-fn build_entry(builder: &mut Builder, target: &str, entry: FileEntry) -> Result<(), ReceiptError> {
+fn build_entry(builder: &mut Builder, target: &str, entry: FileEntry) -> Result<(), RecipeError> {
     let meta = entry.meta;
     match entry.source {
         FileSource::Content(content) => build_content_entry(builder, target, content, meta),
@@ -89,7 +89,7 @@ fn build_content_entry(
     target: &str,
     content: String,
     meta: FileMetadata,
-) -> Result<(), ReceiptError> {
+) -> Result<(), RecipeError> {
     let filename = target_to_filename(target);
     let dest = builder.build_dir().join(&filename);
 
@@ -103,7 +103,7 @@ fn build_path_entry(
     target: &str,
     src_path: PathBuf,
     meta: FileMetadata,
-) -> Result<(), ReceiptError> {
+) -> Result<(), RecipeError> {
     let filename = target_to_filename(target);
     let dest = builder.build_dir().join(&filename);
 
@@ -112,7 +112,7 @@ fn build_path_entry(
     Ok(())
 }
 
-fn copy_path_to_dest(src: &std::path::Path, dest: &std::path::Path) -> Result<(), ReceiptError> {
+fn copy_path_to_dest(src: &std::path::Path, dest: &std::path::Path) -> Result<(), RecipeError> {
     let res = if src.is_dir() {
         std::fs::create_dir_all(dest)?;
         let opts = fs_extra::dir::CopyOptions {
@@ -135,7 +135,7 @@ fn build_symlink_entry(
     target: &str,
     symlink_target: &str,
     meta: FileMetadata,
-) -> Result<(), ReceiptError> {
+) -> Result<(), RecipeError> {
     builder.push(format!(
         "RUN ln -sf {} {}",
         shell_quote(symlink_target),
@@ -258,9 +258,9 @@ mod tests {
 
     use merge::Merge;
 
-    use crate::receipt::error::ReceiptError;
-    use crate::receipt::field::ReceiptField;
-    use crate::receipt::path::SourcePathGuard;
+    use crate::recipe::error::RecipeError;
+    use crate::recipe::field::RecipeField;
+    use crate::recipe::path::SourcePathGuard;
 
     use super::*;
 
@@ -392,14 +392,14 @@ mod tests {
 
     #[test]
     fn null_deserializes_to_default() {
-        let _guard = SourcePathGuard::push_path(p("/receipt.yaml"));
+        let _guard = SourcePathGuard::push_path(p("/recipe.yaml"));
         let field: FilesField = serde_saphyr::from_str("~").unwrap();
         assert_eq!(field.value().unwrap().len(), 0);
     }
 
     #[test]
     fn deserialize_content_entry() {
-        let _guard = SourcePathGuard::push_path(p("/receipt.yaml"));
+        let _guard = SourcePathGuard::push_path(p("/recipe.yaml"));
         let field: FilesField =
             serde_saphyr::from_str("/etc/motd:\n  content: hello world\n").unwrap();
         let mut entries = field.value().unwrap();
@@ -414,7 +414,7 @@ mod tests {
 
     #[test]
     fn deserialize_content_entry_with_metadata() {
-        let _guard = SourcePathGuard::push_path(p("/receipt.yaml"));
+        let _guard = SourcePathGuard::push_path(p("/recipe.yaml"));
         let field: FilesField = serde_saphyr::from_str(
             "/etc/motd:\n  content: hello\n  owner: root\n  group: wheel\n  chmod: '644'\n",
         )
@@ -428,7 +428,7 @@ mod tests {
 
     #[test]
     fn deserialize_symlink_entry() {
-        let _guard = SourcePathGuard::push_path(p("/receipt.yaml"));
+        let _guard = SourcePathGuard::push_path(p("/recipe.yaml"));
         let field: FilesField =
             serde_saphyr::from_str("/usr/bin/sh:\n  symlink: /usr/bin/bash\n").unwrap();
         let mut entries = field.value().unwrap();
@@ -438,8 +438,8 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_path_entry_resolves_relative_to_receipt() {
-        let _guard = SourcePathGuard::push_path(p("/some/dir/receipt.yaml"));
+    fn deserialize_path_entry_resolves_relative_to_recipe() {
+        let _guard = SourcePathGuard::push_path(p("/some/dir/recipe.yaml"));
         let field: FilesField =
             serde_saphyr::from_str("/etc/config:\n  path: files/config.conf\n").unwrap();
         let mut entries = field.value().unwrap();
@@ -451,7 +451,7 @@ mod tests {
 
     #[test]
     fn deserialize_multiple_sources_is_error() {
-        let _guard = SourcePathGuard::push_path(p("/receipt.yaml"));
+        let _guard = SourcePathGuard::push_path(p("/recipe.yaml"));
         let result: Result<FilesField, _> =
             serde_saphyr::from_str("/etc/motd:\n  content: hello\n  symlink: /other\n");
         assert!(result.is_err());
@@ -459,7 +459,7 @@ mod tests {
 
     #[test]
     fn deserialize_missing_source_is_error() {
-        let _guard = SourcePathGuard::push_path(p("/receipt.yaml"));
+        let _guard = SourcePathGuard::push_path(p("/recipe.yaml"));
         let result: Result<FilesField, _> = serde_saphyr::from_str("/etc/motd:\n  owner: root\n");
         assert!(result.is_err());
     }
@@ -487,7 +487,7 @@ mod tests {
         merged.merge(b);
         assert!(matches!(
             merged.value(),
-            Err(ReceiptError::FieldConflict { .. })
+            Err(RecipeError::FieldConflict { .. })
         ));
     }
 }

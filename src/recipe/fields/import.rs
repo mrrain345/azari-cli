@@ -6,9 +6,9 @@ use serde::{
     ser::{Serialize, Serializer},
 };
 
-use crate::receipt::ReceiptError;
-use crate::receipt::field::ReceiptField;
-use crate::receipt::path::current_path;
+use crate::recipe::RecipeError;
+use crate::recipe::field::RecipeField;
+use crate::recipe::path::current_path;
 
 /// Import field state.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -17,15 +17,15 @@ pub struct ImportField {
 }
 
 impl ImportField {
-    /// Creates import state from one source receipt and raw `import` entries.
-    /// Relative paths are resolved against the source receipt directory.
-    pub fn new(source: PathBuf, imports: Vec<PathBuf>) -> Result<Self, ReceiptError> {
+    /// Creates import state from one source recipe and raw `import` entries.
+    /// Relative paths are resolved against the source recipe directory.
+    pub fn new(source: PathBuf, imports: Vec<PathBuf>) -> Result<Self, RecipeError> {
         let source = source.canonicalize().unwrap_or(source);
 
         let base_dir = source
             .parent()
             .map(|p| p.to_path_buf())
-            .ok_or_else(|| ReceiptError::InvalidReceiptPath(source.clone()))?;
+            .ok_or_else(|| RecipeError::InvalidRecipePath(source.clone()))?;
 
         let mut resolved = Vec::with_capacity(imports.len());
         for p in imports {
@@ -37,7 +37,7 @@ impl ImportField {
     }
 }
 
-impl ReceiptField for ImportField {
+impl RecipeField for ImportField {
     type Value = Vec<PathBuf>;
 
     fn name() -> Option<&'static str> {
@@ -45,11 +45,11 @@ impl ReceiptField for ImportField {
     }
 
     /// Imports (empty when full load completes).
-    fn value(self) -> Result<Self::Value, ReceiptError> {
+    fn value(self) -> Result<Self::Value, RecipeError> {
         Ok(self.imports)
     }
 
-    fn error(&self) -> Option<ReceiptError> {
+    fn error(&self) -> Option<RecipeError> {
         None
     }
 }

@@ -6,20 +6,20 @@ use serde::{
     ser::{Serialize, Serializer},
 };
 
-use crate::receipt::error::ReceiptError;
-use crate::receipt::field::ReceiptField;
-use crate::receipt::path::current_path;
+use crate::recipe::error::RecipeError;
+use crate::recipe::field::RecipeField;
+use crate::recipe::path::current_path;
 
-/// A receipt field where only one source may define a value.
-/// Multiple sources defining it with different values results in a [`ReceiptError::FieldConflict`].
+/// A recipe field where only one source may define a value.
+/// Multiple sources defining it with different values results in a [`RecipeError::FieldConflict`].
 /// Multiple sources defining the same value are silently deduplicated.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ReceiptUnique<T = String> {
+pub struct RecipeUnique<T = String> {
     values: Vec<T>,
     paths: Vec<PathBuf>,
 }
 
-impl<T> ReceiptUnique<T> {
+impl<T> RecipeUnique<T> {
     pub fn new(value: T) -> Self {
         let path = current_path().unwrap_or_default();
         Self {
@@ -29,7 +29,7 @@ impl<T> ReceiptUnique<T> {
     }
 }
 
-impl<T: PartialEq> ReceiptField for ReceiptUnique<T> {
+impl<T: PartialEq> RecipeField for RecipeUnique<T> {
     type Value = Option<T>;
 
     fn name() -> Option<&'static str> {
@@ -38,7 +38,7 @@ impl<T: PartialEq> ReceiptField for ReceiptUnique<T> {
 
     /// Returns the unique value if defined by at most one source,
     /// or `Err(FieldConflict)` if multiple sources define different values.
-    fn value(self) -> Result<Self::Value, ReceiptError> {
+    fn value(self) -> Result<Self::Value, RecipeError> {
         if let Some(error) = self.error() {
             Err(error)
         } else {
@@ -46,7 +46,7 @@ impl<T: PartialEq> ReceiptField for ReceiptUnique<T> {
         }
     }
 
-    fn error(&self) -> Option<ReceiptError> {
+    fn error(&self) -> Option<RecipeError> {
         if self.values.len() <= 1 {
             return None;
         }
@@ -57,19 +57,19 @@ impl<T: PartialEq> ReceiptField for ReceiptUnique<T> {
             None
         } else {
             let paths = self.paths.clone();
-            Some(ReceiptError::FieldConflict { field: None, paths })
+            Some(RecipeError::FieldConflict { field: None, paths })
         }
     }
 }
 
-impl<T> Merge for ReceiptUnique<T> {
+impl<T> Merge for RecipeUnique<T> {
     fn merge(&mut self, other: Self) {
         self.values.extend(other.values);
         self.paths.extend(other.paths);
     }
 }
 
-impl<T> Default for ReceiptUnique<T> {
+impl<T> Default for RecipeUnique<T> {
     fn default() -> Self {
         Self {
             values: Vec::new(),
@@ -78,7 +78,7 @@ impl<T> Default for ReceiptUnique<T> {
     }
 }
 
-impl<'de, T> Deserialize<'de> for ReceiptUnique<T>
+impl<'de, T> Deserialize<'de> for RecipeUnique<T>
 where
     T: Deserialize<'de>,
 {
@@ -89,13 +89,13 @@ where
         let opt = Option::<T>::deserialize(deserializer)?;
 
         Ok(match opt {
-            Some(value) => ReceiptUnique::new(value),
-            None => ReceiptUnique::default(),
+            Some(value) => RecipeUnique::new(value),
+            None => RecipeUnique::default(),
         })
     }
 }
 
-impl<T> Serialize for ReceiptUnique<T>
+impl<T> Serialize for RecipeUnique<T>
 where
     T: PartialEq + Clone + Serialize,
 {

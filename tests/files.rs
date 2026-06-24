@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
 use azari::builder::Builder;
-use azari::receipt::{Receipt, ReceiptError, ReceiptField, fields::FileSource};
+use azari::recipe::{Recipe, RecipeError, RecipeField, fields::FileSource};
 
 fn files_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/receipts/files")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/recipes/files")
 }
 
 // --- Field value tests ---
@@ -12,8 +12,8 @@ fn files_dir() -> PathBuf {
 #[test]
 fn load_content_files_field() {
     let path = files_dir().join("content.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let entries = receipt.files.value().unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let entries = recipe.files.value().unwrap();
 
     assert_eq!(entries.len(), 2);
 
@@ -33,8 +33,8 @@ fn load_content_files_field() {
 #[test]
 fn load_symlink_files_field() {
     let path = files_dir().join("symlink.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let mut entries = receipt.files.value().unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let mut entries = recipe.files.value().unwrap();
 
     assert_eq!(entries.len(), 2);
 
@@ -52,8 +52,8 @@ fn load_symlink_files_field() {
 #[test]
 fn load_path_files_field() {
     let path = files_dir().join("path.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let mut entries = receipt.files.value().unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let mut entries = recipe.files.value().unwrap();
 
     assert_eq!(entries.len(), 1);
     let (target, entry) = entries.remove(0);
@@ -66,9 +66,9 @@ fn load_path_files_field() {
 #[test]
 fn build_content_file_writes_to_builddir() {
     let path = files_dir().join("content.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
 
-    let builder = Builder::from_receipt(receipt).unwrap();
+    let builder = Builder::from_recipe(recipe).unwrap();
     let dir_path = builder.build_dir();
 
     let motd = dir_path.join("etc_motd");
@@ -81,8 +81,8 @@ fn build_content_file_writes_to_builddir() {
 #[test]
 fn build_content_file_emits_copy_instructions() {
     let path = files_dir().join("content.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let builder = Builder::from_receipt(receipt).unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let builder = Builder::from_recipe(recipe).unwrap();
     let cf = builder.to_containerfile();
 
     assert!(
@@ -101,8 +101,8 @@ fn build_content_file_emits_copy_instructions() {
 #[test]
 fn build_symlink_emits_run_ln_instruction() {
     let path = files_dir().join("symlink.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let builder = Builder::from_receipt(receipt).unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let builder = Builder::from_recipe(recipe).unwrap();
     let cf = builder.to_containerfile();
 
     assert!(
@@ -114,8 +114,8 @@ fn build_symlink_emits_run_ln_instruction() {
 #[test]
 fn build_symlink_with_owner_and_group_emits_chown() {
     let path = files_dir().join("symlink.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let builder = Builder::from_receipt(receipt).unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let builder = Builder::from_recipe(recipe).unwrap();
     let cf = builder.to_containerfile();
 
     assert!(
@@ -131,8 +131,8 @@ fn build_symlink_with_owner_and_group_emits_chown() {
 #[test]
 fn build_path_file_copies_to_builddir() {
     let path = files_dir().join("path.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let builder = Builder::from_receipt(receipt).unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let builder = Builder::from_recipe(recipe).unwrap();
 
     assert!(
         builder.build_dir().join("etc_builder").exists(),
@@ -143,8 +143,8 @@ fn build_path_file_copies_to_builddir() {
 #[test]
 fn build_path_file_emits_copy_instruction() {
     let path = files_dir().join("path.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let builder = Builder::from_receipt(receipt).unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let builder = Builder::from_recipe(recipe).unwrap();
     let cf = builder.to_containerfile();
 
     assert!(
@@ -157,10 +157,10 @@ fn build_path_file_emits_copy_instruction() {
 // --- Import / merge tests ---
 
 #[test]
-fn files_from_imported_receipt_are_merged() {
+fn files_from_imported_recipe_are_merged() {
     let path = files_dir().join("import-root.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let entries = receipt.files.value().unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let entries = recipe.files.value().unwrap();
 
     assert_eq!(entries.len(), 2);
     let targets: Vec<&str> = entries.iter().map(|(t, _)| t.as_str()).collect();
@@ -177,10 +177,10 @@ fn files_from_imported_receipt_are_merged() {
 #[test]
 fn duplicate_file_path_across_imports_returns_error() {
     let path = files_dir().join("conflict-root.yaml");
-    let result = Receipt::from_file(&path);
+    let result = Recipe::from_file(&path);
 
     assert!(
-        matches!(result, Err(ReceiptError::FieldConflict { .. })),
+        matches!(result, Err(RecipeError::FieldConflict { .. })),
         "expected FieldConflict, got: {:?}",
         result
     );
@@ -191,8 +191,8 @@ fn duplicate_file_path_across_imports_returns_error() {
 #[test]
 fn spaces_in_target_produce_safe_build_dir_filename() {
     let path = files_dir().join("spaces.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let builder = Builder::from_receipt(receipt).unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let builder = Builder::from_recipe(recipe).unwrap();
 
     // The build-dir file must not have spaces in its name.
     let file = builder.build_dir().join("etc_path_with_spaces");
@@ -203,8 +203,8 @@ fn spaces_in_target_produce_safe_build_dir_filename() {
 #[test]
 fn spaces_in_content_target_use_quoted_copy_instruction() {
     let path = files_dir().join("spaces.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let builder = Builder::from_receipt(receipt).unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let builder = Builder::from_recipe(recipe).unwrap();
     let cf = builder.to_containerfile();
 
     // COPY destination with spaces must use the JSON array form.
@@ -218,8 +218,8 @@ fn spaces_in_content_target_use_quoted_copy_instruction() {
 #[test]
 fn spaces_in_symlink_paths_are_shell_quoted() {
     let path = files_dir().join("spaces.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
-    let builder = Builder::from_receipt(receipt).unwrap();
+    let recipe = Recipe::from_file(&path).unwrap();
+    let builder = Builder::from_recipe(recipe).unwrap();
     let cf = builder.to_containerfile();
 
     assert!(

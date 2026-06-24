@@ -2,7 +2,7 @@ use clap::Args;
 
 use crate::builder::command::podman_clear;
 use crate::builder::utils::remove_cache_dir;
-use crate::receipt::{Receipt, ReceiptError, ReceiptField};
+use crate::recipe::{Recipe, RecipeError, RecipeField};
 
 use super::Cli;
 
@@ -15,19 +15,19 @@ pub struct ClearArgs {
 }
 
 impl ClearArgs {
-    pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
+    pub fn run(&self, cli: &Cli) -> Result<(), RecipeError> {
         if self.all {
             podman_clear(None)?;
             remove_cache_dir()?;
             return Ok(());
         }
 
-        let path = cli.receipt_path()?;
-        let receipt = Receipt::from_file(&path)?;
-        let image = receipt
+        let path = cli.recipe_path()?;
+        let recipe = Recipe::from_file(&path)?;
+        let image = recipe
             .image
             .value()?
-            .ok_or(ReceiptError::ImageNotSpecified)?;
+            .ok_or(RecipeError::ImageNotSpecified)?;
 
         podman_clear(Some(&image))
     }

@@ -1,25 +1,25 @@
 use std::path::PathBuf;
 
-use azari::receipt::{Receipt, ReceiptError, ReceiptField};
+use azari::recipe::{Recipe, RecipeError, RecipeField};
 
-fn receipts_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/receipts")
+fn recipes_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/recipes")
 }
 
 #[test]
 fn import_merges_fields_and_lists() {
-    let path = receipts_dir().join("imports/root-imports.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
+    let path = recipes_dir().join("imports/root-imports.yaml");
+    let recipe = Recipe::from_file(&path).unwrap();
 
-    assert_eq!(receipt.distro.value().unwrap().as_deref(), Some("arch"));
+    assert_eq!(recipe.distro.value().unwrap().as_deref(), Some("arch"));
 
-    assert_eq!(receipt.name.value().unwrap().as_deref(), Some("Root Name"));
+    assert_eq!(recipe.name.value().unwrap().as_deref(), Some("Root Name"));
     assert_eq!(
-        receipt.hostname.value().unwrap().as_deref(),
+        recipe.hostname.value().unwrap().as_deref(),
         Some("root-host")
     );
 
-    let packages: Vec<String> = receipt.packages.value().unwrap();
+    let packages: Vec<String> = recipe.packages.value().unwrap();
 
     assert_eq!(
         packages,
@@ -29,13 +29,13 @@ fn import_merges_fields_and_lists() {
 
 #[test]
 fn duplicate_import_is_ignored() {
-    let path = receipts_dir().join("imports/root-duplicate.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
+    let path = recipes_dir().join("imports/root-duplicate.yaml");
+    let recipe = Recipe::from_file(&path).unwrap();
 
-    assert_eq!(receipt.distro.value().unwrap().as_deref(), Some("arch"));
-    assert_eq!(receipt.name.value().unwrap().as_deref(), Some("Dup Root"));
+    assert_eq!(recipe.distro.value().unwrap().as_deref(), Some("arch"));
+    assert_eq!(recipe.name.value().unwrap().as_deref(), Some("Dup Root"));
 
-    let packages: Vec<String> = receipt.packages.value().unwrap();
+    let packages: Vec<String> = recipe.packages.value().unwrap();
 
     assert_eq!(
         packages,
@@ -45,39 +45,39 @@ fn duplicate_import_is_ignored() {
 
 #[test]
 fn circular_imports_do_not_recurse_forever() {
-    let path = receipts_dir().join("imports/cycle-a.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
+    let path = recipes_dir().join("imports/cycle-a.yaml");
+    let recipe = Recipe::from_file(&path).unwrap();
 
     assert_eq!(
-        receipt.from.value().unwrap().as_deref(),
+        recipe.from.value().unwrap().as_deref(),
         Some("cycle-a-image")
     );
-    assert_eq!(receipt.name.value().unwrap().as_deref(), Some("Cycle A"));
+    assert_eq!(recipe.name.value().unwrap().as_deref(), Some("Cycle A"));
 
-    let packages: Vec<String> = receipt.packages.value().unwrap();
+    let packages: Vec<String> = recipe.packages.value().unwrap();
 
     assert_eq!(packages, vec!["cycle-b-pkg", "cycle-a-pkg"]);
 }
 
 #[test]
 fn import_pending_is_empty_after_full_load() {
-    let path = receipts_dir().join("imports/root-duplicate.yaml");
-    let receipt = Receipt::from_file(&path).unwrap();
+    let path = recipes_dir().join("imports/root-duplicate.yaml");
+    let recipe = Recipe::from_file(&path).unwrap();
 
     assert!(
-        receipt.import.value().unwrap().is_empty(),
+        recipe.import.value().unwrap().is_empty(),
         "import pending list should be empty after full load"
     );
 }
 
 #[test]
 fn missing_import_propagates_io_error() {
-    let path = receipts_dir().join("imports/root-missing-import.yaml");
-    let result = Receipt::from_file(&path);
+    let path = recipes_dir().join("imports/root-missing-import.yaml");
+    let result = Recipe::from_file(&path);
 
     assert!(
-        matches!(result, Err(ReceiptError::Parse(_))),
-        "expected parse error for missing imported receipt, got: {:?}",
+        matches!(result, Err(RecipeError::Parse(_))),
+        "expected parse error for missing imported recipe, got: {:?}",
         result
     );
 }

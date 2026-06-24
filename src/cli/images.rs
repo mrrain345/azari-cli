@@ -1,7 +1,7 @@
 use clap::Args;
 
 use crate::builder::command::podman_images;
-use crate::receipt::ReceiptError;
+use crate::recipe::RecipeError;
 
 use super::Cli;
 
@@ -10,7 +10,7 @@ use super::Cli;
 pub struct ImagesArgs {}
 
 impl ImagesArgs {
-    pub fn run(&self, _cli: &Cli) -> Result<(), ReceiptError> {
+    pub fn run(&self, _cli: &Cli) -> Result<(), RecipeError> {
         podman_images()
     }
 }

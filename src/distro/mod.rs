@@ -1,4 +1,4 @@
-use crate::receipt::ReceiptError;
+use crate::recipe::RecipeError;
 use serde::Deserialize;
 use std::{ops::Deref, str::FromStr};
 
@@ -31,11 +31,11 @@ impl Deref for Distro {
 }
 
 impl FromStr for Distro {
-    type Err = ReceiptError;
+    type Err = RecipeError;
 
     fn from_str(distro: &str) -> Result<Self, Self::Err> {
         serde_saphyr::from_str::<Self>(distro)
-            .map_err(|_| ReceiptError::UnsupportedDistro(distro.to_owned()))
+            .map_err(|_| RecipeError::UnsupportedDistro(distro.to_owned()))
     }
 }
 
@@ -100,7 +100,7 @@ mod tests {
     fn rejects_unsupported_distro() {
         let err = Distro::from_str("nixos").unwrap_err();
         assert!(
-            matches!(err, crate::receipt::ReceiptError::UnsupportedDistro(_)),
+            matches!(err, crate::recipe::RecipeError::UnsupportedDistro(_)),
             "expected UnsupportedDistro, got: {err:?}"
         );
     }

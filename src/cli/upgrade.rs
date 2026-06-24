@@ -1,7 +1,7 @@
 use clap::Args;
 
 use crate::builder::command::bootc_upgrade;
-use crate::receipt::ReceiptError;
+use crate::recipe::RecipeError;
 
 use super::Cli;
 
@@ -14,7 +14,7 @@ pub struct UpgradeArgs {
 }
 
 impl UpgradeArgs {
-    pub fn run(&self, _cli: &Cli) -> Result<(), ReceiptError> {
+    pub fn run(&self, _cli: &Cli) -> Result<(), RecipeError> {
         bootc_upgrade(self.version.as_deref())
     }
 }

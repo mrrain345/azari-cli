@@ -1,6 +1,6 @@
 use crate::ini::IniExtra;
-use crate::receipt::error::ReceiptError;
-use crate::receipt::fields::files::target_to_filename;
+use crate::recipe::error::RecipeError;
+use crate::recipe::fields::files::target_to_filename;
 use crate::{builder::Builder, ini::IniMulti};
 use serde::{Deserialize, Serialize};
 
@@ -48,7 +48,7 @@ pub trait SystemdUnit: Serialize + Sized {
     fn has_sections(&self) -> bool;
 
     /// Build this unit and add it to the builder.
-    fn build(&self, builder: &mut Builder, name: &str, is_user: bool) -> Result<(), ReceiptError> {
+    fn build(&self, builder: &mut Builder, name: &str, is_user: bool) -> Result<(), RecipeError> {
         let extension = Self::unit_type();
         let unit_name = format!("{name}.{extension}");
 
@@ -89,7 +89,7 @@ fn write_unit_file(
     unit_name: &str,
     is_user: bool,
     content: &str,
-) -> Result<(), ReceiptError> {
+) -> Result<(), RecipeError> {
     let dir = unit_dir(is_user);
     let path = target_to_filename(&format!("{dir}/{unit_name}"));
     std::fs::write(builder.build_dir().join(&path), content)?;
@@ -98,6 +98,6 @@ fn write_unit_file(
 }
 
 /// Renders a systemd unit struct into an INI-formatted string.
-fn render_unit_file<T: Serialize>(unit: &T) -> Result<String, ReceiptError> {
+fn render_unit_file<T: Serialize>(unit: &T) -> Result<String, RecipeError> {
     crate::ini::to_string(unit).map_err(|e| std::io::Error::other(e).into())
 }

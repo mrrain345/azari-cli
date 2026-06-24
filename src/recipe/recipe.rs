@@ -5,12 +5,12 @@ use merge::Merge;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
-use crate::receipt::ReceiptField;
-use crate::receipt::{ReceiptError, fields::*, path::SourcePathGuard};
+use crate::recipe::RecipeField;
+use crate::recipe::{RecipeError, fields::*, path::SourcePathGuard};
 
 #[derive(Debug, Default, Deserialize, Merge)]
 #[serde(default, rename_all = "kebab-case")]
-pub struct Receipt {
+pub struct Recipe {
     pub import: ImportField,
 
     pub distro: DistroField,
@@ -26,8 +26,8 @@ pub struct Receipt {
     pub systemd: SystemdField,
 }
 
-impl Build for Receipt {
-    fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
+impl Build for Recipe {
+    fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
         // `distro` must be built first — it populates `builder.distro`,
         // which other fields read from during their build step.
         self.distro.build(builder)?;
@@ -46,9 +46,9 @@ impl Build for Receipt {
     }
 }
 
-impl Receipt {
-    fn error(&self) -> Option<ReceiptError> {
-        let errors: Vec<ReceiptError> = vec![
+impl Recipe {
+    fn error(&self) -> Option<RecipeError> {
+        let errors: Vec<RecipeError> = vec![
             self.distro.error(),
             self.image.error(),
             self.from.error(),
@@ -68,22 +68,22 @@ impl Receipt {
         match errors.len() {
             0 => None,
             1 => errors.into_iter().next(),
-            _ => Some(ReceiptError::Aggregate(errors)),
+            _ => Some(RecipeError::Aggregate(errors)),
         }
     }
 
-    pub fn from_file(path: &Path) -> Result<Self, ReceiptError> {
+    pub fn from_file(path: &Path) -> Result<Self, RecipeError> {
         let mut seen = HashSet::new();
-        let receipt = Self::from_file_inner(path, &mut seen)?;
+        let recipe = Self::from_file_inner(path, &mut seen)?;
 
-        if let Some(error) = receipt.error() {
+        if let Some(error) = recipe.error() {
             Err(error)
         } else {
-            Ok(receipt)
+            Ok(recipe)
         }
     }
 
-    fn from_file_inner(path: &Path, seen: &mut HashSet<PathBuf>) -> Result<Self, ReceiptError> {
+    fn from_file_inner(path: &Path, seen: &mut HashSet<PathBuf>) -> Result<Self, RecipeError> {
         let canonical = path.canonicalize()?;
 
         if !seen.insert(canonical.clone()) {
@@ -102,7 +102,7 @@ impl Receipt {
         Ok(base)
     }
 
-    fn parse_single(path: &Path) -> Result<Self, ReceiptError> {
+    fn parse_single(path: &Path) -> Result<Self, RecipeError> {
         let file = std::fs::File::open(path)?;
         let _guard = SourcePathGuard::push_path(path.into());
         Ok(serde_saphyr::from_reader(file)?)

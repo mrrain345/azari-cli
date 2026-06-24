@@ -2,7 +2,7 @@ use std::{os::unix::fs::PermissionsExt, path::PathBuf};
 
 use tempfile::TempDir;
 
-use crate::receipt::ReceiptError;
+use crate::recipe::RecipeError;
 
 /// Returns the XDG cache base, falling back to `~/.cache`.
 fn xdg_cache_home() -> PathBuf {
@@ -30,7 +30,7 @@ pub fn user_tmp_dir() -> PathBuf {
 ///
 /// If `build_dir` is provided, creates a persistent directory at the specified path.
 /// Otherwise, creates a temporary directory that will be automatically deleted when dropped.
-pub fn make_build_dir(build_dir: Option<std::path::PathBuf>) -> Result<TempDir, ReceiptError> {
+pub fn make_build_dir(build_dir: Option<std::path::PathBuf>) -> Result<TempDir, RecipeError> {
     let cleanup = build_dir.is_none();
     let path = build_dir.unwrap_or_else(user_tmp_dir);
     std::fs::create_dir_all(&path)?;
@@ -39,7 +39,7 @@ pub fn make_build_dir(build_dir: Option<std::path::PathBuf>) -> Result<TempDir, 
         .prefix("azari-build-")
         .disable_cleanup(!cleanup)
         .tempdir_in(path)
-        .map_err(ReceiptError::Io)
+        .map_err(RecipeError::Io)
 }
 
 /// Clears the user temporary directory of all files and subdirectories.
@@ -56,7 +56,7 @@ pub fn clear_tmp_dir() -> std::io::Result<()> {
 }
 
 /// Delete the entire azari cache directory, fixing permissions first.
-pub fn remove_cache_dir() -> Result<(), ReceiptError> {
+pub fn remove_cache_dir() -> Result<(), RecipeError> {
     let cache_dir = xdg_cache_home().join("azari");
 
     if cache_dir.exists() {
@@ -89,14 +89,14 @@ pub fn get_timestamp_str() -> String {
 }
 
 /// Checks whether `name` is available on `PATH`, returning an error if not.
-pub fn require_command(name: &str) -> Result<(), ReceiptError> {
+pub fn require_command(name: &str) -> Result<(), RecipeError> {
     let found = std::env::var_os("PATH")
         .map(|paths| std::env::split_paths(&paths).any(|dir| dir.join(name).is_file()))
         .unwrap_or(false);
 
     match found {
         true => Ok(()),
-        false => Err(ReceiptError::CommandNotFound(name.to_owned())),
+        false => Err(RecipeError::CommandNotFound(name.to_owned())),
     }
 }
 
@@ -104,16 +104,16 @@ pub fn require_command(name: &str) -> Result<(), ReceiptError> {
 pub fn execute_command(
     mut cmd: std::process::Command,
     name: impl Into<String>,
-) -> Result<(), ReceiptError> {
+) -> Result<(), RecipeError> {
     let name = name.into();
 
     let status = cmd
         .status()
-        .map_err(|e| ReceiptError::CommandFailed(name.clone(), e.raw_os_error().unwrap_or(0)))?;
+        .map_err(|e| RecipeError::CommandFailed(name.clone(), e.raw_os_error().unwrap_or(0)))?;
 
     match status.success() {
         true => Ok(()),
-        false => Err(ReceiptError::CommandFailed(
+        false => Err(RecipeError::CommandFailed(
             name,
             status.code().unwrap_or(0),
         )),

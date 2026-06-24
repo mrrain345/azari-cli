@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::receipt::ReceiptError;
+use crate::recipe::RecipeError;
 
 pub mod build;
 pub mod clear;
@@ -30,29 +30,29 @@ use upgrade::UpgradeArgs;
 #[derive(Debug, Parser)]
 #[command(name = "azari", version, about)]
 pub struct Cli {
-    /// Path to the receipt file (uses AZARI_RECEIPT env var if not provided)
+    /// Path to the recipe file (uses AZARI_RECIPE env var if not provided)
     #[arg(short, long, value_name = "PATH", global = true)]
-    pub receipt: Option<PathBuf>,
+    pub recipe: Option<PathBuf>,
 
     #[command(subcommand)]
     pub command: Command,
 }
 
 impl Cli {
-    /// Resolves the receipt file path from the following sources, in order:
+    /// Resolves the recipe file path from the following sources, in order:
     ///
-    /// 1. The `--receipt` / `-r` CLI flag
-    /// 2. The `AZARI_RECEIPT` environment variable
+    /// 1. The `--recipe` / `-r` CLI flag
+    /// 2. The `AZARI_RECIPE` environment variable
     ///
-    /// Returns [`ReceiptError::ReceiptNotFound`] if neither is set.
-    pub fn receipt_path(&self) -> Result<PathBuf, ReceiptError> {
-        if let Some(path) = &self.receipt {
+    /// Returns [`RecipeError::RecipeNotProvided`] if neither is set.
+    pub fn recipe_path(&self) -> Result<PathBuf, RecipeError> {
+        if let Some(path) = &self.recipe {
             return Ok(path.clone());
         }
 
-        match std::env::var_os("AZARI_RECEIPT") {
+        match std::env::var_os("AZARI_RECIPE") {
             Some(val) if !val.is_empty() => Ok(PathBuf::from(val)),
-            _ => Err(ReceiptError::ReceiptNotProvided),
+            _ => Err(RecipeError::RecipeNotProvided),
         }
     }
 }
@@ -71,7 +71,7 @@ pub enum Command {
     /// Rollback to the previous deployment
     Rollback(RollbackArgs),
 
-    /// Build the receipt
+    /// Build the recipe
     Build(BuildArgs),
     /// Push a previously built image to its registry
     Push(PushArgs),
@@ -85,7 +85,7 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
+    pub fn run(&self, cli: &Cli) -> Result<(), RecipeError> {
         match self {
             Command::Status(args) => args.run(cli),
             Command::Unlock(args) => args.run(cli),

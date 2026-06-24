@@ -1,4 +1,4 @@
-use azari::{cli::Cli, receipt::ReceiptError};
+use azari::{cli::Cli, recipe::RecipeError};
 use clap::Parser;
 
 fn main() {
@@ -10,9 +10,9 @@ fn main() {
     });
 }
 
-fn print_error(error: &ReceiptError) {
+fn print_error(error: &RecipeError) {
     match error {
-        ReceiptError::Aggregate(errors) => {
+        RecipeError::Aggregate(errors) => {
             for error in errors {
                 print_error(error);
             }

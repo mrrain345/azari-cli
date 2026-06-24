@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 
 thread_local! {
-    /// Stack of source file paths for receipts being deserialized on this thread.
+    /// Stack of source file paths for recipes being deserialized on this thread.
     /// The most recently pushed path is at the end of the vector.
     static PATH_STACK: RefCell<Vec<PathBuf>> = const { RefCell::new(Vec::new()) };
 }
@@ -22,7 +22,7 @@ pub(crate) fn current_path() -> Option<PathBuf> {
 ///
 /// ```text
 /// let _guard = SourcePathGuard::push_path(path.to_path_buf());
-/// let receipt: Receipt = serde_saphyr::from_reader(file)?;
+/// let recipe: Recipe = serde_saphyr::from_reader(file)?;
 /// ```
 pub(crate) struct SourcePathGuard {
     /// The expected stack depth (length) when this guard is dropped.

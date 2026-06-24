@@ -3,9 +3,9 @@ use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
 use crate::distro::UserConfig;
-use crate::receipt::error::ReceiptError;
-use crate::receipt::field::{ReceiptField, rename_field_error};
-use crate::receipt::map::ReceiptMap;
+use crate::recipe::error::RecipeError;
+use crate::recipe::field::{RecipeField, rename_field_error};
+use crate::recipe::map::RecipeMap;
 
 /// Describes a single user account to provision inside the container image.
 #[derive(Debug, Default, Deserialize)]
@@ -33,23 +33,23 @@ pub struct UserEntry {
 ///
 /// A map from usernames to [`UserEntry`] descriptors. Entries from every
 /// source are merged into a single ordered map. Duplicate usernames across
-/// sources are treated as a conflict and return [`ReceiptError::FieldConflict`].
+/// sources are treated as a conflict and return [`RecipeError::FieldConflict`].
 #[derive(Debug, Default, Deserialize, Merge)]
 #[serde(transparent)]
-pub struct UsersField(ReceiptMap<String, UserEntry>);
+pub struct UsersField(RecipeMap<String, UserEntry>);
 
-impl ReceiptField for UsersField {
+impl RecipeField for UsersField {
     type Value = Vec<(String, UserEntry)>;
 
     fn name() -> Option<&'static str> {
         Some("users")
     }
 
-    fn value(self) -> Result<Self::Value, ReceiptError> {
+    fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }
 
-    fn error(&self) -> Option<ReceiptError> {
+    fn error(&self) -> Option<RecipeError> {
         rename_field_error(self.0.error(), |field| {
             format!("users:\"{}\"", field.unwrap_or_default())
         })
@@ -57,7 +57,7 @@ impl ReceiptField for UsersField {
 }
 
 impl Build for UsersField {
-    fn build(self, builder: &mut Builder) -> Result<(), ReceiptError> {
+    fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
         let users = self.value()?;
 
         if users.is_empty() {

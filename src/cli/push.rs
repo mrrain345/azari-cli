@@ -1,7 +1,7 @@
 use clap::Args;
 
 use crate::builder::command::podman_push;
-use crate::receipt::{Receipt, ReceiptError, ReceiptField};
+use crate::recipe::{Recipe, RecipeError, RecipeField};
 
 use super::Cli;
 
@@ -12,8 +12,8 @@ pub struct PushArgs {
     #[arg(short = 'v', long, value_name = "VERSION")]
     pub version: Option<String>,
 
-    /// Override the image name from the receipt (e.g. `docker.io/myorg/myimage`).
-    /// Takes precedence over the `image` field in the receipt.
+    /// Override the image name from the recipe (e.g. `docker.io/myorg/myimage`).
+    /// Takes precedence over the `image` field in the recipe.
     #[arg(short = 'i', long, value_name = "IMAGE")]
     pub image: Option<String>,
 
@@ -23,16 +23,16 @@ pub struct PushArgs {
 }
 
 impl PushArgs {
-    pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
+    pub fn run(&self, cli: &Cli) -> Result<(), RecipeError> {
         let image = match &self.image {
             Some(image) => image.clone(),
             None => {
-                let path = cli.receipt_path()?;
-                let receipt = Receipt::from_file(&path)?;
-                receipt
+                let path = cli.recipe_path()?;
+                let recipe = Recipe::from_file(&path)?;
+                recipe
                     .image
                     .value()?
-                    .ok_or(ReceiptError::ImageNotSpecified)?
+                    .ok_or(RecipeError::ImageNotSpecified)?
             }
         };
 

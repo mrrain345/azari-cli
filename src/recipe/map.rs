@@ -10,22 +10,22 @@ use serde::{
     ser::{Serialize, SerializeMap, Serializer},
 };
 
-use crate::receipt::error::ReceiptError;
-use crate::receipt::field::ReceiptField;
-use crate::receipt::path::current_path;
+use crate::recipe::error::RecipeError;
+use crate::recipe::field::RecipeField;
+use crate::recipe::path::current_path;
 
-/// A map field in a receipt file.
+/// A map field in a recipe file.
 ///
 /// Entries from every source are merged into a single ordered map in source order,
-/// preserving the order in which keys were added (imported receipts have precedence).
+/// preserving the order in which keys were added (imported recipes have precedence).
 /// `value()` returns `Err(FieldConflict)` if the same key appears more than once
 /// across all sources, including the paths of the conflicting files.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ReceiptMap<K = String, V = String> {
+pub struct RecipeMap<K = String, V = String> {
     values: Vec<(K, V, PathBuf)>,
 }
 
-impl<K, V> ReceiptMap<K, V> {
+impl<K, V> RecipeMap<K, V> {
     pub fn new(values: Vec<(K, V)>) -> Self {
         let path = current_path().unwrap_or_default();
         Self {
@@ -37,7 +37,7 @@ impl<K, V> ReceiptMap<K, V> {
     }
 }
 
-impl<K, V> ReceiptField for ReceiptMap<K, V>
+impl<K, V> RecipeField for RecipeMap<K, V>
 where
     K: Eq + Hash + fmt::Display,
 {
@@ -49,7 +49,7 @@ where
 
     /// Returns the merged ordered map across all sources.
     /// Returns `Err(FieldConflict)` if any key appears more than once, with the conflicting paths.
-    fn value(self) -> Result<Self::Value, ReceiptError> {
+    fn value(self) -> Result<Self::Value, RecipeError> {
         if let Some(error) = self.error() {
             Err(error)
         } else {
@@ -57,17 +57,17 @@ where
         }
     }
 
-    fn error(&self) -> Option<ReceiptError> {
+    fn error(&self) -> Option<RecipeError> {
         let mut key_paths: HashMap<&K, Vec<&PathBuf>> = HashMap::new();
 
         for (k, _, path) in &self.values {
             key_paths.entry(k).or_default().push(path);
         }
 
-        let errors: Vec<ReceiptError> = key_paths
+        let errors: Vec<RecipeError> = key_paths
             .into_iter()
             .filter(|(_, paths)| paths.len() > 1)
-            .map(|(k, paths)| ReceiptError::FieldConflict {
+            .map(|(k, paths)| RecipeError::FieldConflict {
                 field: Some(k.to_string()),
                 paths: paths.into_iter().cloned().collect(),
             })
@@ -76,18 +76,18 @@ where
         match errors.len() {
             0 => None,
             1 => errors.into_iter().next(),
-            _ => Some(ReceiptError::Aggregate(errors)),
+            _ => Some(RecipeError::Aggregate(errors)),
         }
     }
 }
 
-impl<K, V> Merge for ReceiptMap<K, V> {
+impl<K, V> Merge for RecipeMap<K, V> {
     fn merge(&mut self, other: Self) {
         self.values.extend(other.values);
     }
 }
 
-impl<K, V> Default for ReceiptMap<K, V> {
+impl<K, V> Default for RecipeMap<K, V> {
     fn default() -> Self {
         Self { values: Vec::new() }
     }
@@ -147,7 +147,7 @@ where
     }
 }
 
-impl<'de, K, V> Deserialize<'de> for ReceiptMap<K, V>
+impl<'de, K, V> Deserialize<'de> for RecipeMap<K, V>
 where
     K: Deserialize<'de>,
     V: Deserialize<'de>,
@@ -159,13 +159,13 @@ where
         let opt = deserializer.deserialize_option(OptionMapVisitor(PhantomData))?;
 
         Ok(match opt {
-            Some(values) => ReceiptMap::new(values),
-            None => ReceiptMap::default(),
+            Some(values) => RecipeMap::new(values),
+            None => RecipeMap::default(),
         })
     }
 }
 
-impl<K, V> Serialize for ReceiptMap<K, V>
+impl<K, V> Serialize for RecipeMap<K, V>
 where
     K: Serialize + Clone + Eq + Hash + fmt::Display,
     V: Serialize + Clone,
@@ -187,9 +187,9 @@ where
 mod tests {
     use merge::Merge;
 
-    use super::ReceiptMap;
-    use crate::receipt::error::ReceiptError;
-    use crate::receipt::field::ReceiptField;
+    use super::RecipeMap;
+    use crate::recipe::error::RecipeError;
+    use crate::recipe::field::RecipeField;
 
     fn pairs(slice: &[(&str, &str)]) -> Vec<(String, String)> {
         slice
@@ -198,17 +198,17 @@ mod tests {
             .collect()
     }
 
-    // --- ReceiptField::value() ---
+    // --- RecipeField::value() ---
 
     #[test]
     fn default_value_is_empty() {
-        let map = ReceiptMap::<String, String>::default();
+        let map = RecipeMap::<String, String>::default();
         assert_eq!(map.value().unwrap(), vec![]);
     }
 
     #[test]
     fn value_returns_pairs_in_insertion_order() {
-        let map = ReceiptMap::new(pairs(&[("b", "2"), ("a", "1"), ("c", "3")]));
+        let map = RecipeMap::new(pairs(&[("b", "2"), ("a", "1"), ("c", "3")]));
         assert_eq!(
             map.value().unwrap(),
             pairs(&[("b", "2"), ("a", "1"), ("c", "3")])
@@ -217,10 +217,10 @@ mod tests {
 
     #[test]
     fn duplicate_key_within_single_source_is_conflict() {
-        let map = ReceiptMap::new(pairs(&[("x", "1"), ("x", "2")]));
+        let map = RecipeMap::new(pairs(&[("x", "1"), ("x", "2")]));
         assert!(matches!(
             map.value(),
-            Err(ReceiptError::FieldConflict { .. })
+            Err(RecipeError::FieldConflict { .. })
         ));
     }
 
@@ -229,8 +229,8 @@ mod tests {
     #[test]
     fn merge_unique_keys_preserves_source_order() {
         // "imported has precedence" pattern: imported.merge(current)
-        let mut merged = ReceiptMap::new(pairs(&[("a", "base"), ("b", "base")]));
-        merged.merge(ReceiptMap::new(pairs(&[("c", "root")])));
+        let mut merged = RecipeMap::new(pairs(&[("a", "base"), ("b", "base")]));
+        merged.merge(RecipeMap::new(pairs(&[("c", "root")])));
         assert_eq!(
             merged.value().unwrap(),
             pairs(&[("a", "base"), ("b", "base"), ("c", "root")])
@@ -239,25 +239,25 @@ mod tests {
 
     #[test]
     fn merge_duplicate_key_across_sources_is_conflict() {
-        let mut merged = ReceiptMap::new(pairs(&[("shared", "from-base")]));
-        merged.merge(ReceiptMap::new(pairs(&[("shared", "from-root")])));
+        let mut merged = RecipeMap::new(pairs(&[("shared", "from-base")]));
+        merged.merge(RecipeMap::new(pairs(&[("shared", "from-root")])));
         assert!(matches!(
             merged.value(),
-            Err(ReceiptError::FieldConflict { .. })
+            Err(RecipeError::FieldConflict { .. })
         ));
     }
 
     #[test]
     fn merge_multiple_duplicate_keys_is_aggregate() {
-        let mut merged = ReceiptMap::new(pairs(&[("a", "1"), ("b", "1")]));
-        merged.merge(ReceiptMap::new(pairs(&[("a", "2"), ("b", "2")])));
-        assert!(matches!(merged.value(), Err(ReceiptError::Aggregate(_))));
+        let mut merged = RecipeMap::new(pairs(&[("a", "1"), ("b", "1")]));
+        merged.merge(RecipeMap::new(pairs(&[("a", "2"), ("b", "2")])));
+        assert!(matches!(merged.value(), Err(RecipeError::Aggregate(_))));
     }
 
     #[test]
     fn merge_with_default_is_identity() {
-        let map = ReceiptMap::new(pairs(&[("k", "v")]));
-        let mut merged = ReceiptMap::default();
+        let map = RecipeMap::new(pairs(&[("k", "v")]));
+        let mut merged = RecipeMap::default();
         merged.merge(map.clone());
         assert_eq!(merged.value().unwrap(), map.value().unwrap());
     }
@@ -266,13 +266,13 @@ mod tests {
 
     #[test]
     fn deserialize_null_yields_default() {
-        let map: ReceiptMap = serde_saphyr::from_str("~").unwrap();
+        let map: RecipeMap = serde_saphyr::from_str("~").unwrap();
         assert_eq!(map.value().unwrap(), vec![]);
     }
 
     #[test]
     fn deserialize_map_yields_ordered_pairs() {
-        let map: ReceiptMap = serde_saphyr::from_str("b: '2'\na: '1'\nc: '3'").unwrap();
+        let map: RecipeMap = serde_saphyr::from_str("b: '2'\na: '1'\nc: '3'").unwrap();
         assert_eq!(
             map.value().unwrap(),
             pairs(&[("b", "2"), ("a", "1"), ("c", "3")])
@@ -283,9 +283,9 @@ mod tests {
 
     #[test]
     fn serialize_roundtrip_preserves_order() {
-        let original: ReceiptMap = serde_saphyr::from_str("b: two\na: one").unwrap();
+        let original: RecipeMap = serde_saphyr::from_str("b: two\na: one").unwrap();
         let yaml = serde_saphyr::to_string(&original).unwrap();
-        let roundtrip: ReceiptMap = serde_saphyr::from_str(&yaml).unwrap();
+        let roundtrip: RecipeMap = serde_saphyr::from_str(&yaml).unwrap();
         assert_eq!(original.value().unwrap(), roundtrip.value().unwrap());
     }
 }

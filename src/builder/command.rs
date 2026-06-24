@@ -2,11 +2,11 @@ use std::path::Path;
 use std::process::Stdio;
 
 use crate::builder::utils::{execute_command, require_command, user_storage, user_tmp_dir};
-use crate::receipt::ReceiptError;
+use crate::recipe::RecipeError;
 
 use super::Builder;
 
-/// Builds the image according to the provided `Builder` and the receipt it was constructed from,
+/// Builds the image according to the provided `Builder` and the recipe it was constructed from,
 /// tagging it as `<image>:latest` and `<image>:<version>` (when `version` is set).
 ///
 /// When `dry` is `true`, prints the `podman build` command that would be run without executing it,
@@ -15,7 +15,7 @@ pub(crate) fn podman_build(
     builder: &mut Builder,
     dry: bool,
     no_cache: bool,
-) -> Result<(), ReceiptError> {
+) -> Result<(), RecipeError> {
     require_command("podman")?;
     let tmp_dir = user_tmp_dir();
     let image = builder.image()?;
@@ -71,10 +71,10 @@ pub(crate) fn podman_push(
     image: &str,
     version: Option<&str>,
     push_latest: bool,
-) -> Result<(), ReceiptError> {
+) -> Result<(), RecipeError> {
     require_command("podman")?;
 
-    let push_tag = |tag: &str| -> Result<(), ReceiptError> {
+    let push_tag = |tag: &str| -> Result<(), RecipeError> {
         let mut cmd = std::process::Command::new("podman");
         cmd.arg("--root")
             .arg(user_storage())
@@ -96,7 +96,7 @@ pub(crate) fn podman_push(
 }
 
 /// Transfers `image:tag` from the user's isolated storage to root's storage.
-pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError> {
+pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), RecipeError> {
     require_command("sudo")?;
     require_command("podman")?;
 
@@ -108,7 +108,7 @@ pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError
         .stdout(Stdio::piped())
         .spawn()
         .map_err(|e| {
-            ReceiptError::CommandFailed("podman save".into(), e.raw_os_error().unwrap_or(0))
+            RecipeError::CommandFailed("podman save".into(), e.raw_os_error().unwrap_or(0))
         })?;
 
     let save_stdout = save.stdout.take().expect("save stdout is piped");
@@ -122,19 +122,19 @@ pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError
         .stdin(save_stdout)
         .status()
         .map_err(|e| {
-            ReceiptError::CommandFailed("podman load".into(), e.raw_os_error().unwrap_or(0))
+            RecipeError::CommandFailed("podman load".into(), e.raw_os_error().unwrap_or(0))
         })?;
 
     let save_status = save.wait()?;
 
     if !save_status.success() {
-        return Err(ReceiptError::CommandFailed(
+        return Err(RecipeError::CommandFailed(
             "podman save".into(),
             save_status.code().unwrap_or(0),
         ));
     }
     if !load_status.success() {
-        return Err(ReceiptError::CommandFailed(
+        return Err(RecipeError::CommandFailed(
             "podman load".into(),
             load_status.code().unwrap_or(0),
         ));
@@ -144,7 +144,7 @@ pub(crate) fn podman_transfer(image: &str, tag: &str) -> Result<(), ReceiptError
 }
 
 /// Pre-allocate a file.
-pub(crate) fn fallocate(path: &Path, size: &str) -> Result<(), ReceiptError> {
+pub(crate) fn fallocate(path: &Path, size: &str) -> Result<(), RecipeError> {
     require_command("sudo")?;
     require_command("fallocate")?;
 
@@ -161,7 +161,7 @@ pub(crate) fn podman_install(
     device: &str,
     wipe: bool,
     via_loopback: bool,
-) -> Result<(), ReceiptError> {
+) -> Result<(), RecipeError> {
     require_command("sudo")?;
     require_command("podman")?;
 
@@ -222,7 +222,7 @@ pub(crate) fn podman_install(
 }
 
 /// Switch the running bootc image to `image:version` via sudo.
-pub(crate) fn bootc_switch(image: &str, version: &str, local: bool) -> Result<(), ReceiptError> {
+pub(crate) fn bootc_switch(image: &str, version: &str, local: bool) -> Result<(), RecipeError> {
     require_command("sudo")?;
     require_command("bootc")?;
 
@@ -239,7 +239,7 @@ pub(crate) fn bootc_switch(image: &str, version: &str, local: bool) -> Result<()
 }
 
 /// Run `bootc upgrade` on the host via sudo.
-pub(crate) fn bootc_upgrade(version: Option<&str>) -> Result<(), ReceiptError> {
+pub(crate) fn bootc_upgrade(version: Option<&str>) -> Result<(), RecipeError> {
     require_command("sudo")?;
     require_command("bootc")?;
 
@@ -254,7 +254,7 @@ pub(crate) fn bootc_upgrade(version: Option<&str>) -> Result<(), ReceiptError> {
 }
 
 /// List images in the user's isolated storage.
-pub(crate) fn podman_images() -> Result<(), ReceiptError> {
+pub(crate) fn podman_images() -> Result<(), RecipeError> {
     require_command("podman")?;
 
     let mut cmd = std::process::Command::new("podman");
@@ -264,7 +264,7 @@ pub(crate) fn podman_images() -> Result<(), ReceiptError> {
 }
 
 /// Prune all images from the user's isolated storage except `<image>:latest`.
-pub(crate) fn podman_clear(image: Option<&str>) -> Result<(), ReceiptError> {
+pub(crate) fn podman_clear(image: Option<&str>) -> Result<(), RecipeError> {
     require_command("podman")?;
 
     // Prune all unused images and volumes
@@ -303,7 +303,7 @@ pub(crate) fn podman_clear(image: Option<&str>) -> Result<(), ReceiptError> {
     execute_command(rmi_cmd, "podman image rm")
 }
 
-pub(crate) fn podman_get_image_ids(filter: Option<&str>) -> Result<Vec<String>, ReceiptError> {
+pub(crate) fn podman_get_image_ids(filter: Option<&str>) -> Result<Vec<String>, RecipeError> {
     require_command("podman")?;
 
     let mut cmd = std::process::Command::new("podman");
@@ -317,11 +317,11 @@ pub(crate) fn podman_get_image_ids(filter: Option<&str>) -> Result<Vec<String>, 
     }
 
     let output = cmd.output().map_err(|e| {
-        ReceiptError::CommandFailed("podman images".into(), e.raw_os_error().unwrap_or(0))
+        RecipeError::CommandFailed("podman images".into(), e.raw_os_error().unwrap_or(0))
     })?;
 
     if !output.status.success() {
-        return Err(ReceiptError::CommandFailed(
+        return Err(RecipeError::CommandFailed(
             "podman images".into(),
             output.status.code().unwrap_or(0),
         ));
@@ -338,7 +338,7 @@ pub(crate) fn podman_get_image_ids(filter: Option<&str>) -> Result<Vec<String>, 
 }
 
 /// Run `bootc usr-overlay` on the host via sudo, making /usr writable.
-pub(crate) fn bootc_unlock() -> Result<(), ReceiptError> {
+pub(crate) fn bootc_unlock() -> Result<(), RecipeError> {
     require_command("sudo")?;
     require_command("bootc")?;
 
@@ -349,7 +349,7 @@ pub(crate) fn bootc_unlock() -> Result<(), ReceiptError> {
 }
 
 /// Run `bootc status` on the host via sudo.
-pub(crate) fn bootc_status() -> Result<(), ReceiptError> {
+pub(crate) fn bootc_status() -> Result<(), RecipeError> {
     require_command("sudo")?;
     require_command("bootc")?;
 
@@ -360,7 +360,7 @@ pub(crate) fn bootc_status() -> Result<(), ReceiptError> {
 }
 
 /// Run `bootc rollback` on the host via sudo.
-pub(crate) fn bootc_rollback() -> Result<(), ReceiptError> {
+pub(crate) fn bootc_rollback() -> Result<(), RecipeError> {
     require_command("sudo")?;
     require_command("bootc")?;
 

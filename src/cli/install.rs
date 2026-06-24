@@ -3,7 +3,7 @@ use std::path::Path;
 use clap::Args;
 
 use crate::builder::command::{fallocate, podman_install};
-use crate::receipt::{Receipt, ReceiptError, ReceiptField};
+use crate::recipe::{Recipe, RecipeError, RecipeField};
 
 use super::Cli;
 
@@ -32,16 +32,16 @@ pub struct InstallArgs {
 }
 
 impl InstallArgs {
-    pub fn run(&self, cli: &Cli) -> Result<(), ReceiptError> {
+    pub fn run(&self, cli: &Cli) -> Result<(), RecipeError> {
         let image = match &self.image {
             Some(image) => image.clone(),
             None => {
-                let path = cli.receipt_path()?;
-                let receipt = Receipt::from_file(&path)?;
-                receipt
+                let path = cli.recipe_path()?;
+                let recipe = Recipe::from_file(&path)?;
+                recipe
                     .image
                     .value()?
-                    .ok_or(ReceiptError::ImageNotSpecified)?
+                    .ok_or(RecipeError::ImageNotSpecified)?
             }
         };
 
@@ -55,7 +55,7 @@ impl InstallArgs {
 
         if via_loopback {
             if device_path.exists() && !self.wipe {
-                return Err(ReceiptError::FileExistsWithoutWipe(device_path.to_owned()));
+                return Err(RecipeError::FileExistsWithoutWipe(device_path.to_owned()));
             }
             println!(
                 "Installing image {image}:{version} to file {} ({})",
