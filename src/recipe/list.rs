@@ -1,4 +1,5 @@
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::recipe::error::RecipeError;
@@ -8,7 +9,7 @@ use crate::recipe::field::RecipeField;
 ///
 /// Items from every source are merged into a single flat list in source order.
 /// Multiple sources defining this field is not a conflict.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct RecipeList<T = String>(Vec<T>);
 
 impl<T> RecipeList<T> {

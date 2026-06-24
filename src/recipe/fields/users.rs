@@ -1,4 +1,5 @@
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -8,7 +9,7 @@ use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::map::RecipeMap;
 
 /// Describes a single user account to provision inside the container image.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct UserEntry {
     /// GECOS field / display name.
@@ -34,7 +35,7 @@ pub struct UserEntry {
 /// A map from usernames to [`UserEntry`] descriptors. Entries from every
 /// source are merged into a single ordered map. Duplicate usernames across
 /// sources are treated as a conflict and return [`RecipeError::FieldConflict`].
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct UsersField(RecipeMap<String, UserEntry>);
 

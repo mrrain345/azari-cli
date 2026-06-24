@@ -27,7 +27,7 @@ fn load_content_files_field() {
     assert_eq!(target, "/etc/sysconfig");
     assert_eq!(entry.meta.owner.as_deref(), Some("root"));
     assert_eq!(entry.meta.group.as_deref(), Some("wheel"));
-    assert_eq!(entry.meta.chmod.as_deref(), Some("644"));
+    assert_eq!(entry.meta.chmod, Some(644));
 }
 
 #[test]

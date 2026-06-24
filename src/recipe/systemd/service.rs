@@ -1,9 +1,10 @@
-use crate::ini::{IniExtra, IniMulti};
+use crate::ini::{IniAny, IniExtra, IniMulti};
 use crate::recipe::systemd::unit::{InstallSection, SystemdUnit, UnitSection};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Content for a `.service` unit file.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct ServiceUnit {
     #[serde(skip_serializing)]
@@ -15,7 +16,7 @@ pub struct ServiceUnit {
 }
 
 /// `[Service]` section of a `.service` unit file.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct ServiceSection {
     /// Activation type: `simple`, `oneshot`, `notify`, `forking`, etc.
@@ -30,9 +31,9 @@ pub struct ServiceSection {
     /// Restart policy: `always`, `on-failure`, `no`, etc.
     pub restart: Option<String>,
     /// Seconds to wait between restarts. Accepts an integer or a string like `5s`.
-    pub restart_sec: Option<serde_value::Value>,
+    pub restart_sec: Option<IniAny>,
     /// Seconds to wait for startup. Accepts an integer or a string like `30s`.
-    pub timeout_start_sec: Option<serde_value::Value>,
+    pub timeout_start_sec: Option<IniAny>,
     /// `KEY=VALUE` environment variables.
     pub environment: IniMulti<String>,
     /// Less-common `[Service]` directives not listed above.

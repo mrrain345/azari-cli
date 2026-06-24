@@ -1,4 +1,5 @@
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -11,7 +12,7 @@ use crate::recipe::unique::RecipeUnique;
 /// Holds the name of the target Linux distribution. During the build this is
 /// the **first** field processed: it resolves to a [`Distro`](crate::distro::Distro)
 /// value stored in the builder that every subsequent field reads.
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct DistroField(RecipeUnique<String>);
 

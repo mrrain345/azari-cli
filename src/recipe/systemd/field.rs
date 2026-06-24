@@ -1,4 +1,5 @@
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -36,7 +37,7 @@ use crate::recipe::systemd::entry::SystemdEntry;
 ///       install:
 ///         wanted-by: multi-user.target
 /// ```
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct SystemdField(RecipeAlt<Vec<String>, RecipeMap<String, SystemdEntry>>);
 
@@ -89,5 +90,39 @@ impl From<Vec<String>> for RecipeMap<String, SystemdEntry> {
                 })
                 .collect(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SystemdField;
+    use crate::recipe::field::RecipeField;
+
+    #[test]
+    fn simple_form_deserializes_to_enabled_services() {
+        let field: SystemdField = serde_saphyr::from_str("- NetworkManager\n- cups").unwrap();
+
+        let values = field.value().unwrap();
+        assert_eq!(values.len(), 2);
+
+        let names: Vec<String> = values.iter().map(|(name, _)| name.clone()).collect();
+        assert_eq!(
+            names,
+            vec!["NetworkManager".to_string(), "cups".to_string()]
+        );
+
+        for (_, entry) in values {
+            assert!(entry.service.enabled);
+            assert!(!entry.socket.enabled);
+            assert!(!entry.timer.enabled);
+            assert!(!entry.path.enabled);
+            assert!(!entry.target.enabled);
+        }
+    }
+
+    #[test]
+    fn null_deserializes_to_empty() {
+        let field: SystemdField = serde_saphyr::from_str("~").unwrap();
+        assert!(field.value().unwrap().is_empty());
     }
 }

@@ -1,4 +1,5 @@
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -10,7 +11,7 @@ use crate::recipe::unique::RecipeUnique;
 ///
 /// Sets the image name and version labels,
 /// and updates the `NAME`, `VERSION`, and `PRETTY_NAME` fields in `/etc/os-release`.
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct NameField(RecipeUnique<String>);
 

@@ -6,5 +6,5 @@ files:
   /etc/sysconfig:
     owner: root
     group: wheel
-    chmod: "644"
+    chmod: 644
     content: "[config]"

@@ -1,9 +1,10 @@
-use crate::ini::IniExtra;
+use crate::ini::{IniAny, IniExtra};
 use crate::recipe::systemd::unit::{InstallSection, SystemdUnit, UnitSection};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Content for a `.socket` unit file.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct SocketUnit {
     #[serde(skip_serializing)]
@@ -15,13 +16,13 @@ pub struct SocketUnit {
 }
 
 /// `[Socket]` section of a `.socket` unit file.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct SocketSection {
     /// Filesystem path or address to listen on.
     pub listen_stream: Option<String>,
     /// Octal permission mode for the socket node (e.g. `0660`).
-    pub socket_mode: Option<serde_value::Value>,
+    pub socket_mode: Option<IniAny>,
     /// User that owns the socket node.
     pub socket_user: Option<String>,
     /// Group that owns the socket node.

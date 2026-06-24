@@ -1,4 +1,5 @@
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -10,7 +11,7 @@ use crate::recipe::unique::RecipeUnique;
 ///
 /// Specifies the image name (e.g. `docker.io/example/myimage`) used as a base
 /// for `podman build -t` tags.
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct ImageField(RecipeUnique<String>);
 

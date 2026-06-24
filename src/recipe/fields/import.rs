@@ -37,6 +37,16 @@ impl ImportField {
     }
 }
 
+impl schemars::JsonSchema for ImportField {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        Vec::<String>::schema_name()
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        Vec::<String>::json_schema(generator)
+    }
+}
+
 impl RecipeField for ImportField {
     type Value = Vec<PathBuf>;
 

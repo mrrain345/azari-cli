@@ -2,13 +2,14 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
 use crate::recipe::RecipeField;
 use crate::recipe::{RecipeError, fields::*, path::SourcePathGuard};
 
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct Recipe {
     pub import: ImportField,

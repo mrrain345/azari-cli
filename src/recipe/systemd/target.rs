@@ -1,8 +1,9 @@
 use crate::recipe::systemd::unit::{InstallSection, SystemdUnit, UnitSection};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Content for a `.target` unit file.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct TargetUnit {
     #[serde(skip_serializing)]

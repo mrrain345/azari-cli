@@ -1,7 +1,26 @@
 use std::collections::HashMap;
 
 use merge::Merge;
+use schemars::{JsonSchema, Schema, SchemaGenerator};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::borrow::Cow;
+
+// ---- IniAny ----
+
+/// A wrapper for any value that can be serialized/deserialized by Serde.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IniAny(pub serde_value::Value);
+
+impl JsonSchema for IniAny {
+    fn schema_name() -> Cow<'static, str> {
+        "IniAny".into()
+    }
+
+    fn json_schema(_generator: &mut SchemaGenerator) -> Schema {
+        // IniAny can be any JSON value, so use a permissive empty schema
+        schemars::json_schema!({})
+    }
+}
 
 // ---- IniMulti ----
 
@@ -10,8 +29,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// Deserializes from `T` or `Vec<T>`.
 /// Serializes as a sequence, which the INI serializer renders as repeated
 /// `Key=value` lines with the same key.
-///
-/// Values from multiple recipe imports are merged by extending.
 ///
 /// # Example
 /// ```yaml
@@ -24,6 +41,24 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// ```
 #[derive(Debug, PartialEq, Eq)]
 pub struct IniMulti<T>(Vec<T>);
+
+impl<T: JsonSchema> JsonSchema for IniMulti<T> {
+    fn schema_name() -> Cow<'static, str> {
+        format!("IniMulti_{}", T::schema_name()).into()
+    }
+
+    fn json_schema(generator: &mut SchemaGenerator) -> Schema {
+        #[derive(schemars::JsonSchema)]
+        #[allow(dead_code)]
+        #[schemars(untagged)]
+        enum IniMultiSchema<T> {
+            Single(T),
+            Many(Vec<T>),
+        }
+
+        IniMultiSchema::<T>::json_schema(generator)
+    }
+}
 
 impl<T> Default for IniMulti<T> {
     fn default() -> Self {
@@ -93,12 +128,12 @@ impl<T: Serialize> Serialize for IniMulti<T> {
 
 /// A map of less-common fields intended for use with `#[serde(flatten)]`.
 ///
-/// Values are stored as untyped [`serde_value::Value`]s so that integers,
+/// Values are stored as untyped [`IniAny`] so that integers,
 /// booleans, and strings from YAML are all accepted without a fixed schema.
 ///
 /// Merges by extending; later sources win on duplicate keys.
-#[derive(Debug, Default, PartialEq)]
-pub struct IniExtra(pub(crate) HashMap<String, serde_value::Value>);
+#[derive(Debug, Default, PartialEq, JsonSchema)]
+pub struct IniExtra(pub(crate) HashMap<String, IniAny>);
 
 impl IniExtra {
     pub fn is_empty(&self) -> bool {
@@ -114,7 +149,10 @@ impl Merge for IniExtra {
 
 impl<'de> Deserialize<'de> for IniExtra {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        HashMap::<String, serde_value::Value>::deserialize(deserializer).map(IniExtra)
+        let map = HashMap::<String, serde_value::Value>::deserialize(deserializer)?;
+        Ok(IniExtra(
+            map.into_iter().map(|(k, v)| (k, IniAny(v))).collect(),
+        ))
     }
 }
 
@@ -126,7 +164,7 @@ impl Serialize for IniExtra {
         let mut map = serializer.serialize_map(Some(sorted.len()))?;
         for (k, v) in sorted {
             // Keys are passed as-is; the INI serializer applies kebab_to_pascal.
-            map.serialize_entry(k.as_str(), v)?;
+            map.serialize_entry(k.as_str(), &v.0)?;
         }
         map.end()
     }

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::{
     de::{Deserialize, Deserializer},
     ser::{Serialize, Serializer},
@@ -9,6 +10,16 @@ use serde::{
 use crate::recipe::error::RecipeError;
 use crate::recipe::field::RecipeField;
 use crate::recipe::path::current_path;
+
+impl<T: JsonSchema> JsonSchema for RecipeUnique<T> {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        T::schema_name()
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        T::json_schema(generator)
+    }
+}
 
 /// A recipe field where only one source may define a value.
 /// Multiple sources defining it with different values results in a [`RecipeError::FieldConflict`].

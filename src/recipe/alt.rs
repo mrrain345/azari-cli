@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::{
     de::{Deserialize, Deserializer},
     ser::{Serialize, Serializer},
@@ -137,5 +138,23 @@ impl<S, C: Serialize> Serialize for RecipeAlt<S, C> {
         Ser: Serializer,
     {
         self.inner.serialize(serializer)
+    }
+}
+
+impl<S: JsonSchema, C: JsonSchema> JsonSchema for RecipeAlt<S, C> {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        format!("RecipeAlt_{}_{}", S::schema_name(), C::schema_name()).into()
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        #[derive(schemars::JsonSchema)]
+        #[allow(dead_code)]
+        #[schemars(untagged)]
+        enum AltSchema<S, C> {
+            Simple(S),
+            Complex(C),
+        }
+
+        AltSchema::<S, C>::json_schema(generator)
     }
 }

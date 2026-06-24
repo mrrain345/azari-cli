@@ -1,4 +1,5 @@
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -10,7 +11,7 @@ use crate::recipe::unique::RecipeUnique;
 ///
 /// Overrides the base OCI image. When absent the distro's default image is
 /// used instead. Emits the `FROM` instruction.
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct FromField(RecipeUnique<String>);
 

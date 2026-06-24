@@ -23,3 +23,5 @@ chrono = "0.4.44"
 ctrlc = "3.5.2"
 merge = { version = "0.1", features = ["derive"] }
 serde-value = "0.7.0"
+schemars = "1.2.1"
+serde_json = "1.0.150"

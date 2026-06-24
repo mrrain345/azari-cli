@@ -1,4 +1,5 @@
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -9,7 +10,7 @@ use crate::recipe::unique::RecipeUnique;
 /// Field for the `hostname` key.
 ///
 /// Emits a distro-specific `RUN` instruction to set the container's hostname.
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct HostnameField(RecipeUnique<String>);
 

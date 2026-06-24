@@ -5,6 +5,7 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::{
     de::{Deserialize, Deserializer, MapAccess, Visitor},
     ser::{Serialize, SerializeMap, Serializer},
@@ -13,6 +14,16 @@ use serde::{
 use crate::recipe::error::RecipeError;
 use crate::recipe::field::RecipeField;
 use crate::recipe::path::current_path;
+
+impl<K: JsonSchema, V: JsonSchema> JsonSchema for RecipeMap<K, V> {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        HashMap::<K, V>::schema_name()
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        HashMap::<K, V>::json_schema(generator)
+    }
+}
 
 /// A map field in a recipe file.
 ///

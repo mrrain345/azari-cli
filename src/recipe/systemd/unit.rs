@@ -2,10 +2,11 @@ use crate::ini::IniExtra;
 use crate::recipe::error::RecipeError;
 use crate::recipe::fields::files::target_to_filename;
 use crate::{builder::Builder, ini::IniMulti};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// `[Unit]` section shared by unit files.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct UnitSection {
     /// Human-readable description of the unit.
@@ -24,7 +25,7 @@ pub struct UnitSection {
 }
 
 /// `[Install]` section shared by unit files.
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct InstallSection {
     /// Targets that pull this unit in when enabled.

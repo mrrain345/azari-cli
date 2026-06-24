@@ -1,4 +1,5 @@
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -9,7 +10,7 @@ use crate::recipe::list::RecipeList;
 /// Field for `preinstall` and `postinstall` keys.
 ///
 /// Each entry is a shell command that is emitted as its own `RUN` instruction.
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct InstallField(RecipeList<String>);
 

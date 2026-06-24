@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer};
 
 use crate::builder::{Build, Builder};
@@ -14,7 +15,7 @@ use crate::recipe::path::current_path;
 /// A map from target paths (inside the image) to file descriptors. Each
 /// descriptor specifies the file's source (`content`, `path`, or `symlink`)
 /// and optional `owner`, `group`, and `chmod` attributes.
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct FilesField(RecipeMap<String, FileEntry>);
 
@@ -42,7 +43,29 @@ pub enum FileSource {
 pub struct FileMetadata {
     pub owner: Option<String>,
     pub group: Option<String>,
-    pub chmod: Option<String>,
+    pub chmod: Option<i32>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[allow(dead_code)]
+#[serde(rename_all = "kebab-case")]
+struct FileEntrySchema {
+    content: Option<String>,
+    path: Option<String>,
+    symlink: Option<String>,
+    owner: Option<String>,
+    group: Option<String>,
+    chmod: Option<i32>,
+}
+
+impl schemars::JsonSchema for FileEntry {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "FileEntry".into()
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        FileEntrySchema::json_schema(generator)
+    }
 }
 
 impl RecipeField for FilesField {
@@ -152,18 +175,7 @@ fn build_symlink_entry(
 
 impl<'de> Deserialize<'de> for FileEntry {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        #[derive(Deserialize)]
-        #[serde(rename_all = "kebab-case")]
-        struct Raw {
-            owner: Option<String>,
-            group: Option<String>,
-            chmod: Option<String>,
-            content: Option<String>,
-            path: Option<PathBuf>,
-            symlink: Option<String>,
-        }
-
-        let raw = Raw::deserialize(deserializer)?;
+        let raw = FileEntrySchema::deserialize(deserializer)?;
 
         let source = match (raw.content, raw.path, raw.symlink) {
             (Some(content), None, None) => FileSource::Content(content),
@@ -303,7 +315,7 @@ mod tests {
         let meta = FileMetadata {
             owner: None,
             group: None,
-            chmod: Some("644".to_string()),
+            chmod: Some(644),
         };
         assert_eq!(
             copy_instruction("src", "/dst", &meta),
@@ -355,7 +367,7 @@ mod tests {
         let meta = FileMetadata {
             owner: Some("user".to_string()),
             group: Some("grp".to_string()),
-            chmod: Some("755".to_string()),
+            chmod: Some(755),
         };
         assert_eq!(
             copy_instruction("src", "/dst", &meta),
@@ -376,7 +388,7 @@ mod tests {
         let meta = FileMetadata {
             owner: Some("root".to_string()),
             group: None,
-            chmod: Some("644".to_string()),
+            chmod: Some(644),
         };
         assert_eq!(
             copy_instruction("src", "/dst file", &meta),
@@ -423,7 +435,7 @@ mod tests {
         let (_, entry) = entries.remove(0);
         assert_eq!(entry.meta.owner.as_deref(), Some("root"));
         assert_eq!(entry.meta.group.as_deref(), Some("wheel"));
-        assert_eq!(entry.meta.chmod.as_deref(), Some("644"));
+        assert_eq!(entry.meta.chmod, Some(644));
     }
 
     #[test]

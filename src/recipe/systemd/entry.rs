@@ -6,10 +6,11 @@ use crate::recipe::systemd::service::ServiceUnit;
 use crate::recipe::systemd::socket::SocketUnit;
 use crate::recipe::systemd::target::TargetUnit;
 use crate::recipe::systemd::timer::TimerUnit;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 /// A single entry in the `systemd` field.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct SystemdEntry {
     /// Installs the unit as a user service.

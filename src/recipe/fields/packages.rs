@@ -1,4 +1,5 @@
 use merge::Merge;
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
@@ -10,7 +11,7 @@ use crate::recipe::list::RecipeList;
 ///
 /// Merges package lists from all imported recipes and emits a single
 /// distro-specific `RUN` install instruction.
-#[derive(Debug, Default, Deserialize, Merge)]
+#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct PackagesField(RecipeList<String>);
 
