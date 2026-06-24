@@ -6,10 +6,9 @@ use crate::recipe::{Recipe, RecipeError, RecipeField};
 
 use super::Cli;
 
-/// Prune all images from user storage except the current image:latest
 #[derive(Debug, Args)]
 pub struct ClearArgs {
-    /// Remove the entire azari cache directory with all images and build artifacts.
+    /// Remove the entire azari cache directory with all images and build artifacts
     #[arg(long)]
     pub all: bool,
 }
@@ -22,7 +21,7 @@ impl ClearArgs {
             return Ok(());
         }
 
-        let path = cli.recipe_path()?;
+        let path = cli.config_path()?;
         let recipe = Recipe::from_file(&path)?;
         let image = recipe
             .image

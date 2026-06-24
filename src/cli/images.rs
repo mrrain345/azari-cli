@@ -5,7 +5,6 @@ use crate::recipe::RecipeError;
 
 use super::Cli;
 
-/// List images in the user's isolated storage
 #[derive(Debug, Args)]
 pub struct ImagesArgs {}
 

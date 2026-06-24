@@ -9,34 +9,33 @@ use crate::recipe::{Recipe, RecipeError};
 
 use super::Cli;
 
-/// Build the recipe
 #[derive(Debug, Args)]
 pub struct BuildArgs {
-    /// Version tag for the image (e.g. `1.0.0`).
+    /// Version tag for the image (e.g. `1.0.0`)
     #[arg(short = 'v', long, value_name = "VERSION")]
     pub version: Option<String>,
 
-    /// Push the image to its registry after a successful build.
+    /// Push the image to its registry after a successful build
     #[arg(short = 'p', long)]
     pub push: bool,
 
-    /// Override the image name from the recipe (e.g. `ghcr.io/user/image`).
+    /// Override the image name from the config (e.g. `ghcr.io/user/image`)
     #[arg(short = 'i', long, value_name = "IMAGE")]
     pub image: Option<String>,
 
-    /// Skip rechunking with chunkah.
+    /// Skip rechunking the image
     #[arg(long)]
     pub skip_rechunk: bool,
 
-    /// Do not use cached layers when building the image.
+    /// Do not use cached layers when building the image
     #[arg(long)]
     pub no_cache: bool,
 
-    /// Create and keep a build directory in the specified path.
+    /// Create and keep a build directory in the specified path
     #[arg(long, value_name = "PATH")]
     pub build_dir: Option<PathBuf>,
 
-    /// Generate the Containerfile but skip running `podman build`.
+    /// Generate the Containerfile but skip building the image
     #[arg(long)]
     pub dry: bool,
 }
@@ -47,7 +46,7 @@ impl BuildArgs {
 
         handle_tmp_cleanup();
 
-        let path = cli.recipe_path()?;
+        let path = cli.config_path()?;
         let recipe = Recipe::from_file(&path)?;
 
         let mut builder = Builder::from_recipe_with(

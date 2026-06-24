@@ -7,18 +7,17 @@ use crate::recipe::{Recipe, RecipeError, RecipeField};
 
 use super::Cli;
 
-/// Install the latest image onto a block device
 #[derive(Debug, Args)]
 pub struct InstallArgs {
     /// Target block device (e.g. `/dev/sda`) or file path
     #[arg(value_name = "DEVICE")]
     pub device: String,
 
-    /// Container image to install (e.g. `ghcr.io/user/image`).
+    /// Container image to install (e.g. `ghcr.io/user/image`)
     #[arg(long, value_name = "IMAGE")]
     pub image: Option<String>,
 
-    /// Image version tag to install (e.g. `1.0.0`). Defaults to `latest`.
+    /// Image version tag to install (e.g. `1.0.0`). Defaults to `latest`
     #[arg(short = 'v', long, value_name = "VERSION")]
     pub version: Option<String>,
 
@@ -26,7 +25,7 @@ pub struct InstallArgs {
     #[arg(long)]
     pub wipe: bool,
 
-    /// Image size when installing to a file. Defaults to `16G`.
+    /// Image size when installing to a file. Defaults to `16G`
     #[arg(long, value_name = "SIZE", default_value = "16G")]
     pub size: String,
 }
@@ -36,7 +35,7 @@ impl InstallArgs {
         let image = match &self.image {
             Some(image) => image.clone(),
             None => {
-                let path = cli.recipe_path()?;
+                let path = cli.config_path()?;
                 let recipe = Recipe::from_file(&path)?;
                 recipe
                     .image

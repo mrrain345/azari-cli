@@ -4,11 +4,11 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum RecipeError {
-    #[error("Recipe path not provided: use --recipe/-r <PATH> or set the AZARI_RECIPE env var")]
-    RecipeNotProvided,
+    #[error("Config path not provided: use --config/-c <PATH> or set the AZARI_CONFIG env var")]
+    ConfigNotProvided,
 
-    #[error("Invalid recipe path: unable to resolve parent directory for `{0}`")]
-    InvalidRecipePath(PathBuf),
+    #[error("Invalid config path: unable to resolve parent directory for `{0}`")]
+    InvalidConfigPath(PathBuf),
 
     #[error("Field `{}` has conflicting values in:\n  - {}", .field.as_deref().unwrap_or("<unknown>"), .paths.iter().map(|p| p.display().to_string()).collect::<Vec<_>>().join("\n  - "))]
     FieldConflict {

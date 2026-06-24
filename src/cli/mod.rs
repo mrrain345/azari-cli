@@ -26,33 +26,32 @@ use switch::SwitchArgs;
 use unlock::UnlockArgs;
 use upgrade::UpgradeArgs;
 
-/// Azari CLI
 #[derive(Debug, Parser)]
 #[command(name = "azari", version, about)]
 pub struct Cli {
-    /// Path to the recipe file (uses AZARI_RECIPE env var if not provided)
+    /// Path to the config file (uses `AZARI_CONFIG` env var if not provided)
     #[arg(short, long, value_name = "PATH", global = true)]
-    pub recipe: Option<PathBuf>,
+    pub config: Option<PathBuf>,
 
     #[command(subcommand)]
     pub command: Command,
 }
 
 impl Cli {
-    /// Resolves the recipe file path from the following sources, in order:
+    /// Resolves the config file path from the following sources, in order:
     ///
-    /// 1. The `--recipe` / `-r` CLI flag
-    /// 2. The `AZARI_RECIPE` environment variable
+    /// 1. The `--config` / `-c` CLI flag
+    /// 2. The `AZARI_CONFIG` environment variable
     ///
-    /// Returns [`RecipeError::RecipeNotProvided`] if neither is set.
-    pub fn recipe_path(&self) -> Result<PathBuf, RecipeError> {
-        if let Some(path) = &self.recipe {
+    /// Returns [`RecipeError::ConfigNotProvided`] if neither is set.
+    pub fn config_path(&self) -> Result<PathBuf, RecipeError> {
+        if let Some(path) = &self.config {
             return Ok(path.clone());
         }
 
-        match std::env::var_os("AZARI_RECIPE") {
+        match std::env::var_os("AZARI_CONFIG") {
             Some(val) if !val.is_empty() => Ok(PathBuf::from(val)),
-            _ => Err(RecipeError::RecipeNotProvided),
+            _ => Err(RecipeError::ConfigNotProvided),
         }
     }
 }
@@ -71,7 +70,7 @@ pub enum Command {
     /// Rollback to the previous deployment
     Rollback(RollbackArgs),
 
-    /// Build the recipe
+    /// Build the system image
     Build(BuildArgs),
     /// Push a previously built image to its registry
     Push(PushArgs),
@@ -80,7 +79,7 @@ pub enum Command {
     Install(InstallArgs),
     /// List all locally stored images
     Images(ImagesArgs),
-    /// Prune all locally stored images except the current image:latest
+    /// Delete all locally stored images except the latest
     Clear(ClearArgs),
 }
 

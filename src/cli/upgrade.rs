@@ -5,10 +5,9 @@ use crate::recipe::RecipeError;
 
 use super::Cli;
 
-/// Upgrade the currently installed bootc system
 #[derive(Debug, Args)]
 pub struct UpgradeArgs {
-    /// Target image version tag for upgrade. Passed to `bootc upgrade --tag`.
+    /// Upgrade to a specific version tag (e.g. `1.0.0`, `latest`)
     #[arg(short = 'v', long, value_name = "VERSION")]
     pub version: Option<String>,
 }

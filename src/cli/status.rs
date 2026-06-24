@@ -5,7 +5,6 @@ use crate::recipe::RecipeError;
 
 use super::Cli;
 
-/// Show the status of the booted bootc system
 #[derive(Debug, Args)]
 pub struct StatusArgs {}
 

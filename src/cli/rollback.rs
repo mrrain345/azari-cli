@@ -5,7 +5,6 @@ use crate::recipe::RecipeError;
 
 use super::Cli;
 
-/// Rollback to the previous bootc deployment
 #[derive(Debug, Args)]
 pub struct RollbackArgs {}
 

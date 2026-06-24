@@ -17,15 +17,15 @@ pub struct ImportField {
 }
 
 impl ImportField {
-    /// Creates import state from one source recipe and raw `import` entries.
-    /// Relative paths are resolved against the source recipe directory.
+    /// Creates import state from one source config and raw `import` entries.
+    /// Relative paths are resolved against the source config directory.
     pub fn new(source: PathBuf, imports: Vec<PathBuf>) -> Result<Self, RecipeError> {
         let source = source.canonicalize().unwrap_or(source);
 
         let base_dir = source
             .parent()
             .map(|p| p.to_path_buf())
-            .ok_or_else(|| RecipeError::InvalidRecipePath(source.clone()))?;
+            .ok_or_else(|| RecipeError::InvalidConfigPath(source.clone()))?;
 
         let mut resolved = Vec::with_capacity(imports.len());
         for p in imports {
