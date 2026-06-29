@@ -39,23 +39,27 @@ impl Build for NameField {
                 None => name.clone(),
             };
 
-            builder.push(os_release_sed("NAME", &name));
+            let mut cmd = Vec::new();
+            cmd.push(os_release_sed("NAME", &name));
+
             if let Some(v) = &version {
-                builder.push(os_release_sed("VERSION", v));
+                cmd.push(os_release_sed("VERSION", v));
             }
-            builder.push(os_release_sed("PRETTY_NAME", &pretty));
+
+            cmd.push(os_release_sed("PRETTY_NAME", &pretty));
+            builder.push(format!("RUN {}", cmd.join(" && ")));
             builder.set_name(pretty);
         }
         Ok(())
     }
 }
 
-/// Produces a `RUN sed -i …` instruction that updates `KEY="value"` in
-/// `/etc/os-release` in-place, or appends it if the key is not present.
+/// Produces a `sed` command that updates `KEY="value"` in
+/// `os-release` in-place, or appends it if the key is not present.
 fn os_release_sed(key: &str, value: &str) -> String {
     let value_e = escape(value);
     format!(
-        "RUN sed -i '/^{key}=/{{s/.*/{key}=\"{value_e}\"/;:a;n;ba}};$a{key}=\"{value_e}\"' /etc/os-release /usr/lib/os-release"
+        "sed -i '/^{key}=/{{s/.*/{key}=\"{value_e}\"/;:a;n;ba}};$a{key}=\"{value_e}\"' /etc/os-release /usr/lib/os-release"
     )
 }
 
