@@ -7,11 +7,14 @@ use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::list::RecipeList;
 
-/// Field for the `packages` key.
-///
-/// Merges package lists from all imported recipes and emits a single
-/// distro-specific `RUN` install instruction.
+/// # Packages
+/// Packages to install with the selected distro package manager.
 #[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
+#[schemars(example = r#"packages:
+  - git
+  - cargo
+  - podman
+"#)]
 #[serde(transparent)]
 pub struct PackagesField(RecipeList<String>);
 

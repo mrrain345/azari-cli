@@ -5,7 +5,8 @@ use crate::{builder::Builder, ini::IniMulti};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// `[Unit]` section shared by unit files.
+/// # Unit Section
+/// `[Unit]` section in the systemd unit file.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct UnitSection {
@@ -24,7 +25,8 @@ pub struct UnitSection {
     pub extra: IniExtra,
 }
 
-/// `[Install]` section shared by unit files.
+/// # Install Section
+/// `[Install]` section in the systemd unit file.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct InstallSection {

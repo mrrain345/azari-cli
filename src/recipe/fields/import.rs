@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use merge::Merge;
+use schemars::{JsonSchema, Schema, SchemaGenerator};
 use serde::{
     de::{Deserialize, Deserializer},
     ser::{Serialize, Serializer},
@@ -10,7 +11,17 @@ use crate::recipe::RecipeError;
 use crate::recipe::field::RecipeField;
 use crate::recipe::path::current_path;
 
-/// Import field state.
+/// # Import
+/// Import additional config files.
+///
+/// Paths may be absolute or relative to the current config file.
+///
+/// **Example:**
+/// ```yaml
+/// import:
+///   - common.yaml
+///   - ../shared/base.yaml
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ImportField {
     imports: Vec<PathBuf>,
@@ -37,13 +48,26 @@ impl ImportField {
     }
 }
 
-impl schemars::JsonSchema for ImportField {
+impl JsonSchema for ImportField {
     fn schema_name() -> std::borrow::Cow<'static, str> {
         Vec::<String>::schema_name()
     }
 
-    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
-        Vec::<String>::json_schema(generator)
+    fn json_schema(generator: &mut SchemaGenerator) -> Schema {
+        let mut schema = Vec::<String>::json_schema(generator);
+        schema.insert("title".to_owned(), "Import".into());
+        schema.insert(
+            "description".to_owned(),
+            "Import additional config files.".into(),
+        );
+        schema.insert(
+            "examples".to_owned(),
+            serde_json::json!([r#"import:
+  - common.yaml
+  - ../shared/base.yaml"#]),
+        );
+
+        schema
     }
 }
 

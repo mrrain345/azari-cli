@@ -3,11 +3,13 @@ use crate::recipe::systemd::unit::{InstallSection, SystemdUnit, UnitSection};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Content for a `.socket` unit file.
+/// # Socket Unit
+/// Content for a socket unit file.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct SocketUnit {
     #[serde(skip_serializing)]
+    /// Whether the socket unit is enabled.
     pub enabled: bool,
 
     pub unit: Option<UnitSection>,
@@ -15,7 +17,8 @@ pub struct SocketUnit {
     pub install: Option<InstallSection>,
 }
 
-/// `[Socket]` section of a `.socket` unit file.
+/// # Socket Section
+/// `[Socket]` section in the systemd unit file.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct SocketSection {

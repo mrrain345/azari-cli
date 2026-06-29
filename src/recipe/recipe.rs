@@ -21,9 +21,9 @@ pub struct Recipe {
     pub hostname: HostnameField,
     pub users: UsersField,
     pub files: FilesField,
-    pub preinstall: InstallField,
+    pub preinstall: PreinstallField,
     pub packages: PackagesField,
-    pub postinstall: InstallField,
+    pub postinstall: PostinstallField,
     pub systemd: SystemdField,
 }
 

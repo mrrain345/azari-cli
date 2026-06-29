@@ -7,14 +7,15 @@ use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::list::RecipeList;
 
-/// Field for `preinstall` and `postinstall` keys.
-///
-/// Each entry is a shell command that is emitted as its own `RUN` instruction.
+/// # Preinstall
+/// Execute shell commands at the beginning of the build process.
 #[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
+#[schemars(example = r#"preinstall:
+  - mkdir -p /opt/custom"#)]
 #[serde(transparent)]
-pub struct InstallField(RecipeList<String>);
+pub struct PreinstallField(RecipeList<String>);
 
-impl RecipeField for InstallField {
+impl RecipeField for PreinstallField {
     type Value = Vec<String>;
 
     fn name() -> Option<&'static str> {
@@ -26,11 +27,11 @@ impl RecipeField for InstallField {
     }
 
     fn error(&self) -> Option<RecipeError> {
-        rename_field_error(self.0.error(), |_| "install".to_string())
+        rename_field_error(self.0.error(), |_| "preinstall".to_string())
     }
 }
 
-impl Build for InstallField {
+impl Build for PreinstallField {
     fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
         for command in self.value()? {
             builder.push(format!("RUN {command}"));

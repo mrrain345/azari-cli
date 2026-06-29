@@ -7,11 +7,10 @@ use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::unique::RecipeUnique;
 
-/// Field for the `name` key.
-///
-/// Sets the image name and version labels,
-/// and updates the `NAME`, `VERSION`, and `PRETTY_NAME` fields in `/etc/os-release`.
+/// # Name
+/// Human-readable OS name.
 #[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
+#[schemars(example = "name: Azari Workstation")]
 #[serde(transparent)]
 pub struct NameField(RecipeUnique<String>);
 

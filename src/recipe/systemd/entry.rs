@@ -9,21 +9,18 @@ use crate::recipe::systemd::timer::TimerUnit;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-/// A single entry in the `systemd` field.
+/// # Systemd Entry
+/// Name of the systemd unit
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct SystemdEntry {
+    /// # User
     /// Installs the unit as a user service.
     pub user: bool,
-    /// Content of the `.service` unit file.
     pub service: ServiceUnit,
-    /// Content of the `.socket` unit file.
     pub socket: SocketUnit,
-    /// Content of the `.timer` unit file.
     pub timer: TimerUnit,
-    /// Content of the `.path` unit file.
     pub path: PathUnit,
-    /// Content of the `.target` unit file.
     pub target: TargetUnit,
 }
 

@@ -7,11 +7,10 @@ use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::unique::RecipeUnique;
 
-/// Field for the `from` key.
-///
-/// Overrides the base OCI image. When absent the distro's default image is
-/// used instead. Emits the `FROM` instruction.
+/// # From
+/// Override the default base image for the selected distro.
 #[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
+#[schemars(example = "from: quay.io/fedora/fedora:41")]
 #[serde(transparent)]
 pub struct FromField(RecipeUnique<String>);
 

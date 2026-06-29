@@ -3,10 +3,12 @@ use crate::recipe::systemd::unit::{InstallSection, SystemdUnit, UnitSection};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Content for a `.service` unit file.
+/// # Service Unit
+/// Content for a service unit file.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct ServiceUnit {
+    /// Whether the service unit is enabled.
     #[serde(skip_serializing)]
     pub enabled: bool,
 
@@ -15,7 +17,8 @@ pub struct ServiceUnit {
     pub install: Option<InstallSection>,
 }
 
-/// `[Service]` section of a `.service` unit file.
+/// # Service Section
+/// `[Service]` section in the systemd unit file.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct ServiceSection {

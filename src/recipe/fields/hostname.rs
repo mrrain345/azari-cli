@@ -7,9 +7,8 @@ use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::unique::RecipeUnique;
 
-/// Field for the `hostname` key.
-///
-/// Emits a distro-specific `RUN` instruction to set the container's hostname.
+/// # Hostname
+/// Set the hostname.
 #[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct HostnameField(RecipeUnique<String>);

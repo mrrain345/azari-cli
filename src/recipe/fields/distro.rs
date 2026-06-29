@@ -7,11 +7,12 @@ use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::unique::RecipeUnique;
 
-/// Field for the `distro` key.
+/// # Distro
+/// Target Linux distribution for the image.
 ///
-/// Holds the name of the target Linux distribution. During the build this is
-/// the **first** field processed: it resolves to a [`Distro`](crate::distro::Distro)
-/// value stored in the builder that every subsequent field reads.
+/// This selects distro-specific defaults such as package manager behavior.
+///
+/// Possible values: `arch`, `debian`, `fedora`, `ubuntu`.
 #[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct DistroField(RecipeUnique<String>);

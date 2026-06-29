@@ -10,19 +10,19 @@ use crate::recipe::map::RecipeMap;
 use crate::recipe::systemd::ServiceUnit;
 use crate::recipe::systemd::entry::SystemdEntry;
 
-/// Field for the `systemd` key.
+/// # Systemd
+/// Systemd units to enable or define.
 ///
-/// Accepts either a flat list of service names to enable (simple form) or a
-/// map from names to full unit-file descriptors (complex form).
+/// Supports two forms:
 ///
-/// **Simple form** — just enable pre-installed services:
+/// **Simple form:** enable existing services by name.
 /// ```yaml
 /// systemd:
 ///   - NetworkManager
 ///   - cups
 /// ```
 ///
-/// **Complex form** — define unit files inline:
+/// **Complex form:** define full units inline.
 /// ```yaml
 /// systemd:
 ///   my-service:

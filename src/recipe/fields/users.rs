@@ -8,34 +8,51 @@ use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::map::RecipeMap;
 
-/// Describes a single user account to provision inside the container image.
+/// # User Entry
+/// Username of the user.
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct UserEntry {
-    /// GECOS field / display name.
+    /// # Fullname
+    /// Full display name.
     pub fullname: Option<String>,
-    /// Pre-hashed (crypt(3)) password string, passed directly to `useradd -p`.
-    /// When `None` the account is left passwordless via `passwd -d`.
+    /// # Password
+    /// Plaintext or hashed password string.
     ///
-    /// Note: `useradd -p` does **not** hash plaintext — supply an already-hashed
-    /// value (e.g. the output of `openssl passwd -6`).
+    /// To generate a hashed password string, use the `openssl passwd -6` command.
+    ///
+    /// If not specified, the user will be created without a password (passwordless login).
+    ///
+    /// **NOTE:** Keep in mind that the hashed password will be stored in the final image,
+    /// so anyone with access to the image can potentially retrieve it.
     pub password: Option<String>,
-    /// Numeric UID. When `None` the system picks the next available UID.
+    /// # UID
+    /// Numeric user ID.
     pub uid: Option<u32>,
-    /// Login shell path (e.g. `/bin/bash`).
+    /// # Shell
+    /// Login shell path.
     pub shell: Option<String>,
-    /// Home directory path. Defaults to `/home/<username>` when `None`.
+    /// # Home
+    /// Home directory path.
     pub home: Option<String>,
-    /// Supplementary groups the user should belong to.
+    /// # Groups
+    /// Extra groups to add the user to.
     pub groups: Vec<String>,
 }
 
-/// Field for the `users` key.
+/// # Users
+/// Users to create in the image.
 ///
-/// A map from usernames to [`UserEntry`] descriptors. Entries from every
-/// source are merged into a single ordered map. Duplicate usernames across
-/// sources are treated as a conflict and return [`RecipeError::FieldConflict`].
+/// Key is the username, value is account settings.
 #[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
+#[schemars(example = r#"users:
+  azari:
+    fullname: "Azari User"
+    shell: /bin/bash
+    groups:
+      - wheel
+      - audio
+"#)]
 #[serde(transparent)]
 pub struct UsersField(RecipeMap<String, UserEntry>);
 

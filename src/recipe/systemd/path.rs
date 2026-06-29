@@ -3,10 +3,13 @@ use crate::recipe::systemd::unit::{InstallSection, SystemdUnit, UnitSection};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Content for a `.path` unit file.
+/// # Path Unit
+/// Content for a path unit file.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct PathUnit {
+    /// # Enabled
+    /// Whether the path unit is enabled.
     #[serde(skip_serializing)]
     pub enabled: bool,
 
@@ -15,7 +18,8 @@ pub struct PathUnit {
     pub install: Option<InstallSection>,
 }
 
-/// `[Path]` section of a `.path` unit file.
+/// # Path Section
+/// `[Path]` section in the systemd unit file.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct PathSection {

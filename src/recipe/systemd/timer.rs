@@ -3,10 +3,12 @@ use crate::recipe::systemd::unit::{InstallSection, SystemdUnit, UnitSection};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// Content for a `.timer` unit file.
+/// # Timer Unit
+/// Content for a timer unit file.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct TimerUnit {
+    /// Whether the timer unit is enabled.
     #[serde(skip_serializing)]
     pub enabled: bool,
 
@@ -15,7 +17,8 @@ pub struct TimerUnit {
     pub install: Option<InstallSection>,
 }
 
-/// `[Timer]` section of a `.timer` unit file.
+/// # Timer Section
+/// `[Timer]` section in the systemd unit file.
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(default, rename_all = "kebab-case")]
 pub struct TimerSection {

@@ -142,6 +142,10 @@ impl<S, C: Serialize> Serialize for RecipeAlt<S, C> {
 }
 
 impl<S: JsonSchema, C: JsonSchema> JsonSchema for RecipeAlt<S, C> {
+    fn inline_schema() -> bool {
+        S::inline_schema() && C::inline_schema()
+    }
+
     fn schema_name() -> std::borrow::Cow<'static, str> {
         format!("RecipeAlt_{}_{}", S::schema_name(), C::schema_name()).into()
     }

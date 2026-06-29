@@ -10,13 +10,25 @@ use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::map::RecipeMap;
 use crate::recipe::path::current_path;
 
-/// Field for the `files` key.
+/// # Files
+/// Files, directories, or symlinks to place in the image.
 ///
-/// A map from target paths (inside the image) to file descriptors. Each
-/// descriptor specifies the file's source (`content`, `path`, or `symlink`)
-/// and optional `owner`, `group`, and `chmod` attributes.
+/// Key is the destination path inside the image. For each entry, set exactly
+/// one of `content`, `path`, or `symlink`.
 #[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
+#[schemars(example = r#"files:
+  /etc/motd:
+    content: Welcome to Azari
+    owner: root
+    group: root
+    chmod: 644
+  /usr/local/bin/my-tool:
+    path: ./assets/my-tool
+    chmod: 755
+  /etc/localtime:
+    symlink: /usr/share/zoneinfo/UTC
+"#)]
 pub struct FilesField(RecipeMap<String, FileEntry>);
 
 /// Describes a single file to be placed in the container image.
@@ -46,15 +58,36 @@ pub struct FileMetadata {
     pub chmod: Option<i32>,
 }
 
+/// # File Entry
+/// Path to the file.
 #[derive(Deserialize, JsonSchema)]
 #[allow(dead_code)]
 #[serde(rename_all = "kebab-case")]
 struct FileEntrySchema {
+    /// # Content
+    /// Inline content to write to the destination path.
+    #[schemars(example = r#"/etc/motd:
+  content: |
+    Welcome to Azari,
+    a declarative Linux system.
+"#)]
     content: Option<String>,
+    /// # Path
+    /// Path to a local source file or directory.
+    ///
+    /// Relative paths are resolved from the config file location.
     path: Option<String>,
+    /// # Symlink
+    /// Symlink target path.
     symlink: Option<String>,
+    /// # Owner
+    /// File owner for copy operations.
     owner: Option<String>,
+    /// # Group
+    /// File group for copy operations.
     group: Option<String>,
+    /// # Chmod
+    /// File mode, e.g. `644` or `755`.
     chmod: Option<i32>,
 }
 
@@ -180,9 +213,9 @@ impl<'de> Deserialize<'de> for FileEntry {
         let source = match (raw.content, raw.path, raw.symlink) {
             (Some(content), None, None) => FileSource::Content(content),
             (None, Some(path), None) => {
-                let source_file = current_path()
-                    .ok_or_else(|| serde::de::Error::custom("current source path is not set"))?;
-                let base = source_file
+                let config_file = current_path()
+                    .ok_or_else(|| serde::de::Error::custom("current config path is not set"))?;
+                let base = config_file
                     .parent()
                     .unwrap_or_else(|| std::path::Path::new("."));
                 FileSource::Path(base.join(path))
