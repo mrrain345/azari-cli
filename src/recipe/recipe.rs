@@ -23,8 +23,8 @@ pub struct Recipe {
     pub files: FilesField,
     pub preinstall: PreinstallField,
     pub packages: PackagesField,
-    pub postinstall: PostinstallField,
     pub systemd: SystemdField,
+    pub postinstall: PostinstallField,
 }
 
 impl Build for Recipe {
@@ -40,8 +40,8 @@ impl Build for Recipe {
         self.files.build(builder)?;
         self.preinstall.build(builder)?;
         self.packages.build(builder)?;
-        self.postinstall.build(builder)?;
         self.systemd.build(builder)?;
+        self.postinstall.build(builder)?;
 
         Ok(())
     }
@@ -60,8 +60,8 @@ impl Recipe {
             self.files.error(),
             self.preinstall.error(),
             self.packages.error(),
-            self.postinstall.error(),
             self.systemd.error(),
+            self.postinstall.error(),
         ]
         .into_iter()
         .flatten()
