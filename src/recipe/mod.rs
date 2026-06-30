@@ -12,7 +12,7 @@ pub mod fields;
 pub mod systemd;
 
 pub use alt::RecipeAlt;
-pub use error::RecipeError;
+pub use error::{RecipeError, label, pathname};
 pub use field::RecipeField;
 pub use list::RecipeList;
 pub use map::RecipeMap;

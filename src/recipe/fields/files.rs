@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer};
 
 use crate::builder::BuildError;
 use crate::builder::{Build, Builder};
-use crate::recipe::error::RecipeError;
+use crate::recipe::error::{RecipeError, pathname};
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::map::RecipeMap;
 use crate::recipe::path::current_path;
@@ -125,7 +125,7 @@ impl RecipeField for FilesField {
                 errors.push(RecipeError::FieldError {
                     path: path.clone(),
                     field: format!("files:\"{target}\""),
-                    message: format!("source path `{}` does not exist", source_path.display()),
+                    message: format!("source path {} does not exist", pathname(source_path)),
                 });
             }
         }

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Args;
+use colored::Colorize;
 
 use crate::builder::command::{podman_build, podman_push};
 use crate::builder::utils::{clear_tmp_dir, user_tmp_dir};
@@ -76,8 +77,14 @@ fn handle_tmp_cleanup() {
     ctrlc::set_handler(|| {
         clear_tmp_dir().unwrap_or_else(|_| {
             let path = user_tmp_dir();
-            let path = path.display();
-            eprintln!("Failed to clear temporary build directory: \"{path}\"");
+            eprintln!(
+                "{}",
+                format!(
+                    "Failed to clear temporary build directory: `{}`",
+                    path.display().to_string().yellow().italic()
+                )
+                .red()
+            );
         });
         std::process::exit(130);
     })
