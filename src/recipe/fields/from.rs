@@ -17,10 +17,6 @@ pub struct FromField(RecipeUnique<String>);
 impl RecipeField for FromField {
     type Value = Option<String>;
 
-    fn name() -> Option<&'static str> {
-        Some("from")
-    }
-
     fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }

@@ -43,10 +43,6 @@ impl<T> RecipeUnique<T> {
 impl<T: PartialEq> RecipeField for RecipeUnique<T> {
     type Value = Option<T>;
 
-    fn name() -> Option<&'static str> {
-        None
-    }
-
     /// Returns the unique value if defined by at most one source,
     /// or `Err(FieldConflict)` if multiple sources define different values.
     fn value(self) -> Result<Self::Value, RecipeError> {

@@ -20,10 +20,6 @@ pub struct DistroField(RecipeUnique<String>);
 impl RecipeField for DistroField {
     type Value = Option<String>;
 
-    fn name() -> Option<&'static str> {
-        Some("distro")
-    }
-
     fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }

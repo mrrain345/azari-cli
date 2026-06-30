@@ -21,10 +21,6 @@ impl<T> RecipeList<T> {
 impl<T> RecipeField for RecipeList<T> {
     type Value = Vec<T>;
 
-    fn name() -> Option<&'static str> {
-        None
-    }
-
     fn value(self) -> Result<Self::Value, RecipeError> {
         Ok(self.0)
     }

@@ -44,10 +44,6 @@ pub struct SystemdField(RecipeAlt<Vec<String>, RecipeMap<String, SystemdEntry>>)
 impl RecipeField for SystemdField {
     type Value = Vec<(String, SystemdEntry)>;
 
-    fn name() -> Option<&'static str> {
-        Some("systemd")
-    }
-
     fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }

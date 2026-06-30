@@ -104,10 +104,6 @@ impl schemars::JsonSchema for FileEntry {
 impl RecipeField for FilesField {
     type Value = Vec<(String, FileEntry)>;
 
-    fn name() -> Option<&'static str> {
-        Some("files")
-    }
-
     fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }

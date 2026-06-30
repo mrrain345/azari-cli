@@ -16,10 +16,6 @@ pub struct HostnameField(RecipeUnique<String>);
 impl RecipeField for HostnameField {
     type Value = Option<String>;
 
-    fn name() -> Option<&'static str> {
-        Some("hostname")
-    }
-
     fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }

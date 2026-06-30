@@ -17,10 +17,6 @@ pub struct ImageField(RecipeUnique<String>);
 impl RecipeField for ImageField {
     type Value = Option<String>;
 
-    fn name() -> Option<&'static str> {
-        Some("image")
-    }
-
     fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }

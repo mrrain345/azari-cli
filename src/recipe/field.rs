@@ -7,9 +7,6 @@ pub trait RecipeField: Sized + Merge {
     /// Type of value this field resolves to.
     type Value;
 
-    /// Returns the name of this field, if it has one.
-    fn name() -> Option<&'static str>;
-
     /// Resolves this field into its value.
     fn value(self) -> Result<Self::Value, RecipeError>;
 

@@ -81,10 +81,6 @@ where
 {
     type Value = C::Value;
 
-    fn name() -> Option<&'static str> {
-        C::name()
-    }
-
     fn value(self) -> Result<Self::Value, RecipeError> {
         self.inner.unwrap_or_default().value()
     }

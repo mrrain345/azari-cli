@@ -17,10 +17,6 @@ pub struct NameField(RecipeUnique<String>);
 impl RecipeField for NameField {
     type Value = Option<String>;
 
-    fn name() -> Option<&'static str> {
-        Some("name")
-    }
-
     fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }

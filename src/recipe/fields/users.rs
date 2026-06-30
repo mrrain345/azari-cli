@@ -59,10 +59,6 @@ pub struct UsersField(RecipeMap<String, UserEntry>);
 impl RecipeField for UsersField {
     type Value = Vec<(String, UserEntry)>;
 
-    fn name() -> Option<&'static str> {
-        Some("users")
-    }
-
     fn value(self) -> Result<Self::Value, RecipeError> {
         self.0.value()
     }

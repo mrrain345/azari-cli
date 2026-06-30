@@ -54,10 +54,6 @@ where
 {
     type Value = Vec<(K, V)>;
 
-    fn name() -> Option<&'static str> {
-        None
-    }
-
     /// Returns the merged ordered map across all sources.
     /// Returns `Err(FieldConflict)` if any key appears more than once, with the conflicting paths.
     fn value(self) -> Result<Self::Value, RecipeError> {
