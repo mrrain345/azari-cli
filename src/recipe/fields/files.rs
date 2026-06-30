@@ -4,6 +4,7 @@ use merge::Merge;
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer};
 
+use crate::builder::BuildError;
 use crate::builder::{Build, Builder};
 use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
@@ -109,14 +110,36 @@ impl RecipeField for FilesField {
     }
 
     fn error(&self) -> Option<RecipeError> {
-        rename_field_error(self.0.error(), |field| {
+        let mut errors = Vec::new();
+
+        if let Some(error) = rename_field_error(self.0.error(), |field| {
             format!("files:\"{}\"", field.unwrap_or_default())
-        })
+        }) {
+            errors.push(error);
+        }
+
+        for (target, entry, path) in self.0.entries() {
+            if let FileSource::Path(source_path) = &entry.source
+                && !source_path.exists()
+            {
+                errors.push(RecipeError::FieldError {
+                    path: path.clone(),
+                    field: format!("files:\"{target}\""),
+                    message: format!("source path `{}` does not exist", source_path.display()),
+                });
+            }
+        }
+
+        match errors.len() {
+            0 => None,
+            1 => errors.into_iter().next(),
+            _ => Some(RecipeError::Aggregate(errors)),
+        }
     }
 }
 
 impl Build for FilesField {
-    fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
+    fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
         for (target, entry) in self.value()? {
             build_entry(builder, &target, entry)?;
         }
@@ -125,7 +148,7 @@ impl Build for FilesField {
     }
 }
 
-fn build_entry(builder: &mut Builder, target: &str, entry: FileEntry) -> Result<(), RecipeError> {
+fn build_entry(builder: &mut Builder, target: &str, entry: FileEntry) -> Result<(), BuildError> {
     let meta = entry.meta;
     match entry.source {
         FileSource::Content(content) => build_content_entry(builder, target, content, meta),
@@ -141,7 +164,7 @@ fn build_content_entry(
     target: &str,
     content: String,
     meta: FileMetadata,
-) -> Result<(), RecipeError> {
+) -> Result<(), BuildError> {
     let filename = target_to_filename(target);
     let dest = builder.build_dir().join(&filename);
 
@@ -155,7 +178,7 @@ fn build_path_entry(
     target: &str,
     src_path: PathBuf,
     meta: FileMetadata,
-) -> Result<(), RecipeError> {
+) -> Result<(), BuildError> {
     let filename = target_to_filename(target);
     let dest = builder.build_dir().join(&filename);
 
@@ -164,7 +187,7 @@ fn build_path_entry(
     Ok(())
 }
 
-fn copy_path_to_dest(src: &std::path::Path, dest: &std::path::Path) -> Result<(), RecipeError> {
+fn copy_path_to_dest(src: &std::path::Path, dest: &std::path::Path) -> Result<(), BuildError> {
     let res = if src.is_dir() {
         std::fs::create_dir_all(dest)?;
         let opts = fs_extra::dir::CopyOptions {
@@ -178,7 +201,7 @@ fn copy_path_to_dest(src: &std::path::Path, dest: &std::path::Path) -> Result<()
 
     match res {
         Ok(_) => Ok(()),
-        Err(e) => Err(std::io::Error::other(e).into()),
+        Err(e) => Err(BuildError::Io(std::io::Error::other(e))),
     }
 }
 
@@ -187,7 +210,7 @@ fn build_symlink_entry(
     target: &str,
     symlink_target: &str,
     meta: FileMetadata,
-) -> Result<(), RecipeError> {
+) -> Result<(), BuildError> {
     builder.push(format!(
         "RUN ln -sf {} {}",
         shell_quote(symlink_target),

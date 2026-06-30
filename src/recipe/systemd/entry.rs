@@ -1,5 +1,4 @@
-use crate::builder::Builder;
-use crate::recipe::error::RecipeError;
+use crate::builder::{BuildError, Builder};
 use crate::recipe::systemd::SystemdUnit;
 use crate::recipe::systemd::path::PathUnit;
 use crate::recipe::systemd::service::ServiceUnit;
@@ -25,7 +24,7 @@ pub struct SystemdEntry {
 }
 
 impl SystemdEntry {
-    pub fn build(self, builder: &mut Builder, name: &str) -> Result<(), RecipeError> {
+    pub fn build(self, builder: &mut Builder, name: &str) -> Result<(), BuildError> {
         let is_user = self.user;
 
         self.service.build(builder, name, is_user)?;

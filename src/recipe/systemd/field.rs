@@ -3,6 +3,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
+use crate::builder::BuildError;
 use crate::recipe::RecipeAlt;
 use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
@@ -56,7 +57,7 @@ impl RecipeField for SystemdField {
 }
 
 impl Build for SystemdField {
-    fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
+    fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
         for (name, entry) in self.value()? {
             entry.build(builder, &name)?;
         }

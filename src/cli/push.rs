@@ -1,7 +1,8 @@
 use clap::Args;
 
+use crate::builder::BuildError;
 use crate::builder::command::podman_push;
-use crate::recipe::{Recipe, RecipeError, RecipeField};
+use crate::recipe::{Recipe, RecipeField};
 
 use super::Cli;
 
@@ -21,16 +22,13 @@ pub struct PushArgs {
 }
 
 impl PushArgs {
-    pub fn run(&self, cli: &Cli) -> Result<(), RecipeError> {
+    pub fn run(&self, cli: &Cli) -> Result<(), BuildError> {
         let image = match &self.image {
             Some(image) => image.clone(),
             None => {
                 let path = cli.config_path()?;
                 let recipe = Recipe::from_file(&path)?;
-                recipe
-                    .image
-                    .value()?
-                    .ok_or(RecipeError::ImageNotSpecified)?
+                recipe.image.value()?.ok_or(BuildError::ImageNotSpecified)?
             }
         };
 

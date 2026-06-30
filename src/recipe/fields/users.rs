@@ -3,6 +3,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
+use crate::builder::BuildError;
 use crate::distro::UserConfig;
 use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
@@ -71,7 +72,7 @@ impl RecipeField for UsersField {
 }
 
 impl Build for UsersField {
-    fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
+    fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
         let users = self.value()?;
 
         if users.is_empty() {

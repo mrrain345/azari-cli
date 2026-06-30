@@ -47,9 +47,22 @@ fn missing_file_returns_io_error() {
     let result = Recipe::from_file(&path);
 
     assert!(
-        matches!(result, Err(RecipeError::Io(_))),
+        matches!(result, Err(RecipeError::Io { .. })),
         "expected an I/O error for a missing file, got: {:?}",
         result
     );
+}
+
+#[test]
+fn parse_error_includes_file_path() {
+    let path = recipes_dir().join("parse-error.yaml");
+    let result = Recipe::from_file(&path);
+
+    match result {
+        Err(RecipeError::Parse { path: error_path, .. }) => {
+            assert_eq!(error_path, path);
+        }
+        other => panic!("expected parse error for invalid yaml, got: {:?}", other),
+    }
 }
 

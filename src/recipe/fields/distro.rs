@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
 use crate::recipe::error::RecipeError;
+use crate::builder::BuildError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::unique::RecipeUnique;
 
@@ -30,8 +31,8 @@ impl RecipeField for DistroField {
 }
 
 impl Build for DistroField {
-    fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
-        let distro_str = self.value()?.ok_or(RecipeError::DistroNotSpecified)?;
+    fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
+        let distro_str = self.value()?.ok_or(BuildError::DistroNotSpecified)?;
         builder.set_distro(distro_str.parse()?);
         Ok(())
     }

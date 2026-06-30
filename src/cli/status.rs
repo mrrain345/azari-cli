@@ -1,7 +1,7 @@
 use clap::Args;
 
+use crate::builder::BuildError;
 use crate::builder::command::bootc_status;
-use crate::recipe::RecipeError;
 
 use super::Cli;
 
@@ -9,7 +9,7 @@ use super::Cli;
 pub struct StatusArgs {}
 
 impl StatusArgs {
-    pub fn run(&self, _cli: &Cli) -> Result<(), RecipeError> {
+    pub fn run(&self, _cli: &Cli) -> Result<(), BuildError> {
         bootc_status()
     }
 }

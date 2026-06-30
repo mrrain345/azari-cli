@@ -1,7 +1,8 @@
 use clap::Args;
 
+use crate::builder::BuildError;
 use crate::builder::command::{bootc_switch, podman_transfer};
-use crate::recipe::{Recipe, RecipeError, RecipeField};
+use crate::recipe::{Recipe, RecipeField};
 
 use super::Cli;
 
@@ -17,13 +18,10 @@ pub struct SwitchArgs {
 }
 
 impl SwitchArgs {
-    pub fn run(&self, cli: &Cli) -> Result<(), RecipeError> {
+    pub fn run(&self, cli: &Cli) -> Result<(), BuildError> {
         let path = cli.config_path()?;
         let recipe = Recipe::from_file(&path)?;
-        let image = recipe
-            .image
-            .value()?
-            .ok_or(RecipeError::ImageNotSpecified)?;
+        let image = recipe.image.value()?.ok_or(BuildError::ImageNotSpecified)?;
 
         if self.local {
             println!(

@@ -46,6 +46,10 @@ impl<K, V> RecipeMap<K, V> {
                 .collect(),
         }
     }
+
+    pub(crate) fn entries(&self) -> impl Iterator<Item = (&K, &V, &PathBuf)> {
+        self.values.iter().map(|(key, value, path)| (key, value, path))
+    }
 }
 
 impl<K, V> RecipeField for RecipeMap<K, V>

@@ -1,7 +1,8 @@
 use clap::Args;
 use schemars::{generate::SchemaSettings, transform::AddNullable};
 
-use crate::recipe::{Recipe, RecipeError};
+use crate::builder::BuildError;
+use crate::recipe::Recipe;
 
 use super::Cli;
 
@@ -9,7 +10,7 @@ use super::Cli;
 pub struct SchemaArgs {}
 
 impl SchemaArgs {
-    pub fn run(&self, _cli: &Cli) -> Result<(), RecipeError> {
+    pub fn run(&self, _cli: &Cli) -> Result<(), BuildError> {
         let settings = SchemaSettings::draft07().with(|s| {
             s.inline_subschemas = true;
             s.transforms = vec![Box::new(AddNullable::default())];

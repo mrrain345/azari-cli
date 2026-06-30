@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
-use crate::recipe::RecipeError;
+use crate::builder::BuildError;
 
 pub mod build;
 pub mod clear;
@@ -45,15 +45,15 @@ impl Cli {
     /// 1. The `--config` / `-c` CLI flag
     /// 2. The `AZARI_CONFIG` environment variable
     ///
-    /// Returns [`RecipeError::ConfigNotProvided`] if neither is set.
-    pub fn config_path(&self) -> Result<PathBuf, RecipeError> {
+    /// Returns [`BuildError::ConfigNotProvided`] if neither is set.
+    pub fn config_path(&self) -> Result<PathBuf, BuildError> {
         if let Some(path) = &self.config {
             return Ok(path.clone());
         }
 
         match std::env::var_os("AZARI_CONFIG") {
             Some(val) if !val.is_empty() => Ok(PathBuf::from(val)),
-            _ => Err(RecipeError::ConfigNotProvided),
+            _ => Err(BuildError::ConfigNotProvided),
         }
     }
 }
@@ -88,7 +88,7 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn run(&self, cli: &Cli) -> Result<(), RecipeError> {
+    pub fn run(&self, cli: &Cli) -> Result<(), BuildError> {
         match self {
             Command::Status(args) => args.run(cli),
             Command::Unlock(args) => args.run(cli),

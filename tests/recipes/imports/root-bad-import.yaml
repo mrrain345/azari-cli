@@ -1,0 +1,5 @@
+import:
+  - bad-imported.yaml
+
+distro: arch
+name: Root Bad Import

@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 use crate::builder::{Build, Builder};
 use crate::recipe::error::RecipeError;
+use crate::builder::BuildError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::unique::RecipeUnique;
 
@@ -27,7 +28,7 @@ impl RecipeField for ImageField {
 }
 
 impl Build for ImageField {
-    fn build(self, builder: &mut Builder) -> Result<(), RecipeError> {
+    fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
         if let Some(image) = self.value()? {
             builder.set_image(image);
         }

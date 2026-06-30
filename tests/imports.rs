@@ -75,9 +75,68 @@ fn missing_import_propagates_io_error() {
     let path = recipes_dir().join("imports/root-missing-import.yaml");
     let result = Recipe::from_file(&path);
 
-    assert!(
-        matches!(result, Err(RecipeError::Parse(_))),
-        "expected parse error for missing imported recipe, got: {:?}",
-        result
-    );
+    match result {
+        Err(RecipeError::FieldError {
+            path: error_path,
+            field,
+            message,
+        }) => {
+            assert_eq!(error_path, path);
+            assert_eq!(field, "import");
+            assert!(message.contains("does-not-exist.yaml"));
+        }
+        other => panic!(
+            "expected field error for missing imported recipe, got: {:?}",
+            other
+        ),
+    }
+}
+
+#[test]
+fn multiple_missing_imports_are_reported_together() {
+    let path = recipes_dir().join("imports/multi-missing.yaml");
+    let result = Recipe::from_file(&path);
+
+    match result {
+        Err(RecipeError::Aggregate(errors)) => {
+            assert_eq!(errors.len(), 2);
+
+            for error in errors {
+                match error {
+                    RecipeError::FieldError {
+                        path: error_path,
+                        field,
+                        message,
+                    } => {
+                        assert_eq!(error_path, path);
+                        assert_eq!(field, "import");
+                        assert!(
+                            message.contains("missing-a.yaml")
+                                || message.contains("missing-b.yaml")
+                        );
+                    }
+                    other => panic!("expected import field error, got: {:?}", other),
+                }
+            }
+        }
+        other => panic!("expected aggregated import field errors, got: {:?}", other),
+    }
+}
+
+#[test]
+fn imported_parse_error_is_reported_from_imported_file() {
+    let path = recipes_dir().join("imports/root-bad-import.yaml");
+    let imported_path = recipes_dir().join("imports/bad-imported.yaml");
+    let result = Recipe::from_file(&path);
+
+    match result {
+        Err(RecipeError::Parse {
+            path: error_path,
+            source,
+        }) => {
+            assert_eq!(error_path, imported_path);
+            assert!(source.to_string().contains("line 2"));
+        }
+        other => panic!("expected parse error from imported file, got: {:?}", other),
+    }
 }

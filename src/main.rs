@@ -1,4 +1,4 @@
-use azari::{cli::Cli, recipe::RecipeError};
+use azari::{builder::BuildError, cli::Cli, recipe::RecipeError};
 use clap::Parser;
 
 fn main() {
@@ -10,13 +10,20 @@ fn main() {
     });
 }
 
-fn print_error(error: &RecipeError) {
+fn print_error(error: &BuildError) {
+    match error {
+        BuildError::Recipe(recipe_error) => print_recipe_error(recipe_error),
+        _ => eprintln!("{error}\n"),
+    }
+}
+
+fn print_recipe_error(error: &RecipeError) {
     match error {
         RecipeError::Aggregate(errors) => {
             for error in errors {
-                print_error(error);
+                print_recipe_error(error);
             }
         }
-        _ => eprintln!("ERROR: {error}"),
+        _ => eprintln!("{error}\n"),
     }
 }

@@ -1,12 +1,13 @@
 use tempfile::TempDir;
 
+use crate::builder::error::BuildError;
 use crate::builder::utils::{get_timestamp_str, make_build_dir};
 use crate::distro::Distro;
-use crate::recipe::{Recipe, RecipeError};
+use crate::recipe::Recipe;
 
 /// Trait for building a Containerfile from a recipe field.
 pub trait Build {
-    fn build(self, builder: &mut Builder) -> Result<(), RecipeError>;
+    fn build(self, builder: &mut Builder) -> Result<(), BuildError>;
 }
 
 /// In-memory Containerfile builder.
@@ -35,15 +36,12 @@ const CHUNKAH_MAX_LAYERS: usize = 128;
 
 impl Builder {
     /// Builds containerfile lines from a recipe.
-    pub fn from_recipe(recipe: Recipe) -> Result<Self, RecipeError> {
+    pub fn from_recipe(recipe: Recipe) -> Result<Self, BuildError> {
         Self::from_recipe_with(recipe, BuilderOptions::default())
     }
 
     /// Builds containerfile lines from a recipe with additional options.
-    pub fn from_recipe_with(
-        recipe: Recipe,
-        options: BuilderOptions,
-    ) -> Result<Self, RecipeError> {
+    pub fn from_recipe_with(recipe: Recipe, options: BuilderOptions) -> Result<Self, BuildError> {
         let mut builder = Builder {
             distro: None,
             image: options.image,
@@ -82,8 +80,8 @@ impl Builder {
     }
 
     /// Returns the image ref name.
-    pub fn image(&self) -> Result<&str, RecipeError> {
-        self.image.as_deref().ok_or(RecipeError::ImageNotSpecified)
+    pub fn image(&self) -> Result<&str, BuildError> {
+        self.image.as_deref().ok_or(BuildError::ImageNotSpecified)
     }
 
     /// Returns the version.
@@ -138,8 +136,8 @@ impl Builder {
     /// Returns the resolved distro.
     ///
     /// [`Builder::set_distro`] must have been called beforehand.
-    pub(crate) fn distro(&self) -> Result<Distro, RecipeError> {
-        self.distro.ok_or(RecipeError::DistroNotSpecified)
+    pub(crate) fn distro(&self) -> Result<Distro, BuildError> {
+        self.distro.ok_or(BuildError::DistroNotSpecified)
     }
 
     /// Appends a single Containerfile instruction line.
@@ -165,7 +163,7 @@ impl Builder {
 
     /// Writes the Containerfile to `<build_dir>/Containerfile` and returns
     /// the path to the written file.
-    pub fn write_containerfile(&self) -> Result<std::path::PathBuf, RecipeError> {
+    pub fn write_containerfile(&self) -> Result<std::path::PathBuf, BuildError> {
         let path = self.build_dir.path().join("Containerfile");
         std::fs::write(&path, self.to_containerfile())?;
         Ok(path)

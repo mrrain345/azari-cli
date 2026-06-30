@@ -4,8 +4,8 @@ use clap::Args;
 
 use crate::builder::command::{podman_build, podman_push};
 use crate::builder::utils::{clear_tmp_dir, user_tmp_dir};
-use crate::builder::{Builder, BuilderOptions};
-use crate::recipe::{Recipe, RecipeError};
+use crate::builder::{BuildError, Builder, BuilderOptions};
+use crate::recipe::Recipe;
 
 use super::Cli;
 
@@ -41,7 +41,7 @@ pub struct BuildArgs {
 }
 
 impl BuildArgs {
-    pub fn run(&self, cli: &Cli) -> Result<(), RecipeError> {
+    pub fn run(&self, cli: &Cli) -> Result<(), BuildError> {
         // TODO: Remove the need for `cli`, consume self
 
         handle_tmp_cleanup();

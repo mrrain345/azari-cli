@@ -1,0 +1,6 @@
+import:
+  - missing-a.yaml
+  - missing-b.yaml
+
+distro: arch
+name: Multi Missing Imports
