@@ -3,8 +3,6 @@ use clap::Args;
 use crate::builder::BuildError;
 use crate::builder::command::bootc_upgrade;
 
-use super::Cli;
-
 #[derive(Debug, Args)]
 pub struct UpgradeArgs {
     /// Upgrade to a specific version tag (e.g. `1.0.0`, `latest`)
@@ -13,7 +11,7 @@ pub struct UpgradeArgs {
 }
 
 impl UpgradeArgs {
-    pub fn run(&self, _cli: &Cli) -> Result<(), BuildError> {
+    pub fn run(self) -> Result<(), BuildError> {
         bootc_upgrade(self.version.as_deref())
     }
 }

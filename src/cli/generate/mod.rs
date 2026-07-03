@@ -8,7 +8,6 @@ use clap::{Args, Subcommand};
 use schema::GenerateSchemaArgs;
 use shell::GenerateShellArgs;
 
-use super::Cli;
 use crate::builder::BuildError;
 
 pub mod schema;
@@ -29,10 +28,10 @@ pub enum GenerateCommand {
 }
 
 impl GenerateArgs {
-    pub fn run(&self, cli: &Cli) -> Result<(), BuildError> {
-        match &self.command {
-            GenerateCommand::Schema(args) => args.run(cli),
-            GenerateCommand::Shell(args) => args.run(cli),
+    pub fn run(self) -> Result<(), BuildError> {
+        match self.command {
+            GenerateCommand::Schema(args) => args.run(),
+            GenerateCommand::Shell(args) => args.run(),
         }
     }
 }

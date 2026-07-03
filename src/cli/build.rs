@@ -8,8 +8,6 @@ use crate::builder::utils::{clear_tmp_dir, user_tmp_dir};
 use crate::builder::{BuildError, Builder, BuilderOptions};
 use crate::recipe::Recipe;
 
-use super::Cli;
-
 #[derive(Debug, Args)]
 pub struct BuildArgs {
     /// Version tag for the image (e.g. `1.0.0`)
@@ -42,20 +40,18 @@ pub struct BuildArgs {
 }
 
 impl BuildArgs {
-    pub fn run(&self, cli: &Cli) -> Result<(), BuildError> {
-        // TODO: Remove the need for `cli`, consume self
-
+    pub fn run(self, config: Option<PathBuf>) -> Result<(), BuildError> {
         handle_tmp_cleanup();
 
-        let path = cli.config_path()?;
+        let path = config.ok_or(BuildError::ConfigNotProvided)?;
         let recipe = Recipe::from_file(&path)?;
 
         let mut builder = Builder::from_recipe_with(
             recipe,
             BuilderOptions {
-                version: self.version.clone(),
-                build_dir: self.build_dir.clone(),
-                image: self.image.clone(),
+                version: self.version,
+                build_dir: self.build_dir,
+                image: self.image,
             },
         )?;
 

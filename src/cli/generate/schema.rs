@@ -5,7 +5,7 @@ use schemars::{generate::SchemaSettings, transform::AddNullable};
 
 use crate::{builder::BuildError, recipe::Recipe};
 
-use super::{super::Cli, resolve_path, write_output};
+use super::{resolve_path, write_output};
 
 const INSTALL_PATH: &str = "/usr/lib/azari/schema.json";
 
@@ -21,7 +21,7 @@ pub struct GenerateSchemaArgs {
 }
 
 impl GenerateSchemaArgs {
-    pub fn run(&self, _cli: &Cli) -> Result<(), BuildError> {
+    pub fn run(self) -> Result<(), BuildError> {
         let content = generate_schema()?;
 
         let path = if self.install {

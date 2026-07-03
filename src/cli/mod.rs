@@ -40,6 +40,12 @@ pub struct Cli {
 }
 
 impl Cli {
+    /// Runs the command specified in the CLI arguments.
+    pub fn run(self) -> Result<(), BuildError> {
+        let config = self.config_path().ok();
+        self.command.run(config)
+    }
+
     /// Resolves the config file path from the following sources, in order:
     ///
     /// 1. The `--config` / `-c` CLI flag
@@ -88,19 +94,19 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn run(&self, cli: &Cli) -> Result<(), BuildError> {
+    pub fn run(self, config: Option<PathBuf>) -> Result<(), BuildError> {
         match self {
-            Command::Status(args) => args.run(cli),
-            Command::Unlock(args) => args.run(cli),
-            Command::Upgrade(args) => args.run(cli),
-            Command::Switch(args) => args.run(cli),
-            Command::Rollback(args) => args.run(cli),
-            Command::Build(args) => args.run(cli),
-            Command::Push(args) => args.run(cli),
-            Command::Install(args) => args.run(cli),
-            Command::Images(args) => args.run(cli),
-            Command::Clear(args) => args.run(cli),
-            Command::Generate(args) => args.run(cli),
+            Command::Status(args) => args.run(),
+            Command::Unlock(args) => args.run(),
+            Command::Upgrade(args) => args.run(),
+            Command::Switch(args) => args.run(config),
+            Command::Rollback(args) => args.run(),
+            Command::Build(args) => args.run(config),
+            Command::Push(args) => args.run(config),
+            Command::Install(args) => args.run(config),
+            Command::Images(args) => args.run(),
+            Command::Clear(args) => args.run(config),
+            Command::Generate(args) => args.run(),
         }
     }
 }

@@ -84,7 +84,7 @@ impl ShellKind {
 }
 
 impl GenerateShellArgs {
-    pub fn run(&self, _cli: &Cli) -> Result<(), BuildError> {
+    pub fn run(self) -> Result<(), BuildError> {
         match &self.shell {
             ShellKind::All => self.generate_all(),
             _ => self.generate_single(&self.shell),

@@ -1,10 +1,10 @@
+use std::path::PathBuf;
+
 use clap::Args;
 
 use crate::builder::BuildError;
 use crate::builder::command::podman_push;
 use crate::recipe::{Recipe, RecipeField};
-
-use super::Cli;
 
 #[derive(Debug, Args)]
 pub struct PushArgs {
@@ -22,11 +22,11 @@ pub struct PushArgs {
 }
 
 impl PushArgs {
-    pub fn run(&self, cli: &Cli) -> Result<(), BuildError> {
-        let image = match &self.image {
-            Some(image) => image.clone(),
+    pub fn run(self, config: Option<PathBuf>) -> Result<(), BuildError> {
+        let image = match self.image {
+            Some(image) => image,
             None => {
-                let path = cli.config_path()?;
+                let path = config.ok_or(BuildError::ConfigNotProvided)?;
                 let recipe = Recipe::from_file(&path)?;
                 recipe.image.value()?.ok_or(BuildError::ImageNotSpecified)?
             }

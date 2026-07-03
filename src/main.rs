@@ -12,7 +12,7 @@ fn main() {
 
     let cli = Cli::parse();
 
-    cli.command.run(&cli).unwrap_or_else(|e| {
+    cli.run().unwrap_or_else(|e| {
         print_error(&e);
         std::process::exit(1);
     });
