@@ -13,16 +13,18 @@ name = "azari"
 path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.6.0", features = ["derive"] }
+clap = { version = "4.6.1", features = ["derive"] }
 serde = { version = "1.0.228", features = ["derive"] }
-serde-saphyr = "0.0.21"
+serde-saphyr = "0.0.29"
 fs_extra = "1"
 tempfile = "3.27.0"
 thiserror = "2.0.18"
-chrono = "0.4.44"
+chrono = "0.4.45"
 ctrlc = "3.5.2"
-merge = { version = "0.1", features = ["derive"] }
+merge = { version = "0.2", features = ["derive"] }
 serde-value = "0.7.0"
 schemars = "1.2.1"
 serde_json = "1.0.150"
 colored = "3.1.1"
+clap_complete = "4.6.7"
+clap_complete_nushell = "4.6.0"

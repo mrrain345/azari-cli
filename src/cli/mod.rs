@@ -6,11 +6,11 @@ use crate::builder::BuildError;
 
 pub mod build;
 pub mod clear;
+pub mod generate;
 pub mod images;
 pub mod install;
 pub mod push;
 pub mod rollback;
-pub mod schema;
 pub mod status;
 pub mod switch;
 pub mod unlock;
@@ -18,11 +18,11 @@ pub mod upgrade;
 
 use build::BuildArgs;
 use clear::ClearArgs;
+use generate::GenerateArgs;
 use images::ImagesArgs;
 use install::InstallArgs;
 use push::PushArgs;
 use rollback::RollbackArgs;
-use schema::SchemaArgs;
 use status::StatusArgs;
 use switch::SwitchArgs;
 use unlock::UnlockArgs;
@@ -83,8 +83,8 @@ pub enum Command {
     Images(ImagesArgs),
     /// Delete all locally stored images except the latest
     Clear(ClearArgs),
-    /// Generate a JSON schema for the recipe format
-    Schema(SchemaArgs),
+    /// Generate files (schema, shell completions)
+    Generate(GenerateArgs),
 }
 
 impl Command {
@@ -100,7 +100,7 @@ impl Command {
             Command::Install(args) => args.run(cli),
             Command::Images(args) => args.run(cli),
             Command::Clear(args) => args.run(cli),
-            Command::Schema(args) => args.run(cli),
+            Command::Generate(args) => args.run(cli),
         }
     }
 }
