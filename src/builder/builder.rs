@@ -85,11 +85,6 @@ impl Builder {
         self.stages.last_mut().expect("stages is never empty")
     }
 
-    /// Returns the auto-generated name for stage at `index` (1-based: "stage_1", "stage_2", …).
-    fn stage_name(index: usize) -> String {
-        format!("stage_{}", index + 1)
-    }
-
     /// Returns the resolved distro.
     ///
     /// [`Builder::set_distro`] must have been called beforehand.
@@ -104,24 +99,9 @@ impl Builder {
         self.stages.push(stage);
     }
 
-    /// Sets the FROM image reference on the current stage.
-    pub fn set_stage_from(&mut self, from: String) {
-        self.current_mut().set_from(from);
-    }
-
-    /// Appends a single Containerfile instruction line.
+    /// Appends a single Containerfile instruction line to the current stage.
     pub fn push(&mut self, line: impl Into<String>) {
         self.current_mut().push(line);
-    }
-
-    /// Appends an early Containerfile instruction line.
-    pub fn push_early(&mut self, line: impl Into<String>) {
-        self.current_mut().push_early(line);
-    }
-
-    /// Appends a late Containerfile instruction line.
-    pub fn push_late(&mut self, line: impl Into<String>) {
-        self.current_mut().push_late(line);
     }
 
     /// Returns the path to the build directory.
@@ -134,7 +114,7 @@ impl Builder {
         self.stages
             .iter()
             .enumerate()
-            .map(|(i, stage)| stage.to_containerfile(&Self::stage_name(i)))
+            .map(|(i, stage)| stage.to_containerfile(&stage_name(i)))
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
             .join("\n")
@@ -153,7 +133,7 @@ impl Builder {
         self.push("RUN bootc container lint --no-truncate");
 
         if rechunk {
-            let stage_name = Self::stage_name(self.stages.len() - 1);
+            let stage_name = stage_name(self.stages.len() - 1);
             self.add_stage("quay.io/coreos/chunkah".into());
             self.push(format!(
                 "RUN {} \\\n  {} \\\n  {}",
@@ -161,6 +141,7 @@ impl Builder {
                 format_args!("--mount=from={stage_name},target=/chunkah,ro"),
                 format_args!("chunkah build --max-layers {CHUNKAH_MAX_LAYERS} --output oci:/usr/lib/azari/chunkah/out")
             ));
+
             self.add_stage("oci:chunkah/out".into());
         }
 
@@ -168,15 +149,20 @@ impl Builder {
             .meta
             .oci_labels()
             .iter()
-            .map(|(k, v)| format!(r#""{k}"="{v}""#))
-            .chain([
-                r#""containers.bootc"="1""#.into(),
-                r#""azari.managed"="true""#.into(),
+            .chain(&[
+                ("containers.bootc", "1".into()),
+                ("azari.managed", "true".into()),
             ])
+            .map(|(k, v)| format!(r#""{k}"="{v}""#))
             .collect::<Vec<_>>();
 
         self.push(format!("LABEL {}", labels.join(" \\\n    "),));
     }
+}
+
+/// Returns the auto-generated name for stage at `index`
+fn stage_name(index: usize) -> String {
+    format!("stage_{}", index + 1)
 }
 
 #[cfg(test)]

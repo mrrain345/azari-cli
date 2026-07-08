@@ -33,8 +33,9 @@ impl Build for FromField {
         let image = self
             .value()?
             .unwrap_or_else(|| distro.default_image().to_owned());
+
         builder.meta_mut().set_base_image(image.clone());
-        builder.set_stage_from(image);
+        builder.current_mut().set_from(image);
         Ok(())
     }
 }
