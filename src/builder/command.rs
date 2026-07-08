@@ -18,7 +18,7 @@ pub(crate) fn podman_build(
 ) -> Result<(), BuildError> {
     require_command("podman")?;
     let tmp_dir = user_tmp_dir();
-    let image = builder.image()?;
+    let image = builder.meta().output_image()?.to_owned();
     let build_dir = builder.build_dir();
 
     std::fs::create_dir(build_dir.join("chunkah"))?;
@@ -45,11 +45,11 @@ pub(crate) fn podman_build(
         cmd.arg("--no-cache");
     }
 
-    for (key, val) in builder.oci_labels() {
+    for (key, val) in builder.meta().oci_labels() {
         cmd.arg(format!("--annotation={key}={val}"));
     }
 
-    if let Some(ver) = builder.version() {
+    if let Some(ver) = builder.meta().version() {
         cmd.arg(format!("--tag={image}:{ver}"));
     }
 

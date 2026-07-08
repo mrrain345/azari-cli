@@ -30,7 +30,7 @@ impl RecipeField for NameField {
 impl Build for NameField {
     fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
         if let Some(name) = self.value()? {
-            let version = builder.version().map(str::to_owned);
+            let version = builder.meta().version().map(str::to_owned);
             let pretty = match &version {
                 Some(v) => format!("{name} {v}"),
                 None => name.clone(),
@@ -45,7 +45,7 @@ impl Build for NameField {
 
             cmd.push(os_release_sed("PRETTY_NAME", &pretty));
             builder.push(format!("RUN {}", cmd.join(" && ")));
-            builder.set_pretty_name(pretty);
+            builder.meta_mut().set_pretty_name(pretty);
         }
         Ok(())
     }

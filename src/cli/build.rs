@@ -51,7 +51,7 @@ impl BuildArgs {
             BuilderOptions {
                 version: self.version,
                 build_dir: self.build_dir,
-                image: self.image,
+                output_image: self.image,
             },
         )?;
 
@@ -61,7 +61,11 @@ impl BuildArgs {
         podman_build(&mut builder, self.dry, self.no_cache)?;
 
         if self.push && !self.dry {
-            podman_push(builder.image()?, builder.version(), true)?;
+            podman_push(
+                builder.meta().output_image()?,
+                builder.meta().version(),
+                true,
+            )?;
         }
 
         Ok(())

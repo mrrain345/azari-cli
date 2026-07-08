@@ -30,7 +30,7 @@ impl RecipeField for ImageField {
 impl Build for ImageField {
     fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
         if let Some(image) = self.value()? {
-            builder.set_image(image);
+            builder.meta_mut().set_output_image(image);
         }
         Ok(())
     }
