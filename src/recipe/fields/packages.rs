@@ -37,9 +37,7 @@ impl Build for PackagesField {
         let packages = self.value()?;
         if !packages.is_empty() {
             let refs: Vec<&str> = packages.iter().map(String::as_str).collect();
-            if let Some(instruction) = distro.install_packages(&refs) {
-                builder.push(instruction);
-            }
+            distro.install_packages(builder, &refs);
         }
         Ok(())
     }

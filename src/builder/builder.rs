@@ -36,6 +36,18 @@ pub struct BuilderOptions {
 }
 
 impl Builder {
+    /// Creates a new empty builder with the given distro.
+    pub fn empty(distro: Distro) -> Result<Self, BuildError> {
+        let builder = Builder {
+            distro,
+            meta: ImageMetadata::default(),
+            stages: vec![BuilderStage::default()],
+            build_dir: make_build_dir(None)?,
+        };
+
+        Ok(builder)
+    }
+
     /// Builds containerfile from a recipe.
     pub fn from_recipe(recipe: Recipe) -> Result<Self, BuildError> {
         Self::from_recipe_with(recipe, BuilderOptions::default())

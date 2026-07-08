@@ -81,19 +81,18 @@ impl Build for UsersField {
 
         let distro = builder.distro();
 
-        for (username, entry) in &users {
+        for (username, entry) in users {
             let config = UserConfig {
                 username,
-                fullname: entry.fullname.as_deref(),
-                password: entry.password.as_deref(),
+                fullname: entry.fullname,
+                password: entry.password,
                 uid: entry.uid,
-                shell: entry.shell.as_deref(),
-                home: entry.home.as_deref(),
-                groups: &entry.groups,
+                shell: entry.shell,
+                home: entry.home,
+                groups: entry.groups,
             };
-            for instruction in distro.add_user(&config) {
-                builder.push(instruction);
-            }
+
+            distro.add_user(builder, &config);
         }
 
         Ok(())

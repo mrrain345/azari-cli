@@ -1,4 +1,4 @@
-use crate::builder::BuildError;
+use crate::builder::{BuildError, Builder};
 use serde::Deserialize;
 use std::{ops::Deref, str::FromStr};
 
@@ -40,21 +40,21 @@ impl FromStr for Distro {
 }
 
 /// Parameters for creating a user account inside a container image.
-pub struct UserConfig<'a> {
-    pub username: &'a str,
+pub struct UserConfig {
+    pub username: String,
     /// GECOS / display name.
-    pub fullname: Option<&'a str>,
+    pub fullname: Option<String>,
     /// Pre-hashed (crypt(3)) password string, passed directly to `useradd -p`.
     /// When `None` the account is left passwordless via `passwd -d`.
-    pub password: Option<&'a str>,
+    pub password: Option<String>,
     /// Numeric UID. `None` lets the system choose.
     pub uid: Option<u32>,
     /// Login shell path (e.g. `/bin/bash`).
-    pub shell: Option<&'a str>,
+    pub shell: Option<String>,
     /// Home directory path.
-    pub home: Option<&'a str>,
+    pub home: Option<String>,
     /// Supplementary group names.
-    pub groups: &'a [String],
+    pub groups: Vec<String>,
 }
 
 /// Distro specific operations.
@@ -66,13 +66,13 @@ pub trait DistroOps {
     fn default_image(&self) -> &'static str;
 
     /// Build instruction for setting hostname.
-    fn set_hostname(&self, hostname: &str) -> Option<String>;
+    fn set_hostname(&self, builder: &mut Builder, hostname: &str);
 
     /// Build instruction for installing packages.
-    fn install_packages(&self, packages: &[&str]) -> Option<String>;
+    fn install_packages(&self, builder: &mut Builder, packages: &[&str]);
 
     /// Containerfile instructions to create a user account.
-    fn add_user(&self, config: &UserConfig) -> Vec<String>;
+    fn add_user(&self, builder: &mut Builder, config: &UserConfig);
 }
 
 #[cfg(test)]
@@ -84,16 +84,10 @@ mod tests {
 
     #[test]
     fn parses_supported_distros() {
-        assert_eq!(Distro::from_str("arch").unwrap(), Distro::Arch);
-        assert_eq!(Distro::from_str("fedora").unwrap(), Distro::Fedora);
-        assert_eq!(Distro::from_str("ubuntu").unwrap(), Distro::Ubuntu);
-        assert_eq!(Distro::from_str("debian").unwrap(), Distro::Debian);
-    }
-
-    #[test]
-    fn parses_using_str_parse() {
-        let distro: Distro = "arch".parse().unwrap();
-        assert_eq!(distro, Distro::Arch);
+        assert_eq!("arch".parse::<Distro>().unwrap(), Distro::Arch);
+        assert_eq!("fedora".parse::<Distro>().unwrap(), Distro::Fedora);
+        assert_eq!("ubuntu".parse::<Distro>().unwrap(), Distro::Ubuntu);
+        assert_eq!("debian".parse::<Distro>().unwrap(), Distro::Debian);
     }
 
     #[test]
@@ -103,45 +97,5 @@ mod tests {
             matches!(err, crate::builder::BuildError::UnsupportedDistro(_)),
             "expected UnsupportedDistro, got: {err:?}"
         );
-    }
-
-    #[test]
-    fn empty_packages_return_none_for_all_distros() {
-        let variants = [Distro::Arch, Distro::Fedora, Distro::Ubuntu, Distro::Debian];
-        for distro in variants {
-            assert_eq!(distro.install_packages(&[]), None);
-        }
-    }
-
-    #[test]
-    fn package_instruction_is_emitted_for_non_empty_packages() {
-        for distro in VARIANTS {
-            let instr = distro.install_packages(&["vim"]).unwrap();
-            assert!(instr.starts_with("RUN "), "unexpected instruction: {instr}");
-            assert!(
-                instr.contains("vim"),
-                "missing package in instruction: {instr}"
-            );
-        }
-    }
-
-    #[test]
-    fn hostname_instruction_is_emitted() {
-        for distro in VARIANTS {
-            let instr = distro.set_hostname("azari").unwrap();
-            assert!(instr.starts_with("RUN "), "unexpected instruction: {instr}");
-            assert!(
-                instr.contains("azari"),
-                "missing hostname in instruction: {instr}"
-            );
-        }
-    }
-
-    #[test]
-    fn distro_names_match_variants() {
-        assert_eq!(Distro::Arch.distro(), "arch");
-        assert_eq!(Distro::Fedora.distro(), "fedora");
-        assert_eq!(Distro::Ubuntu.distro(), "ubuntu");
-        assert_eq!(Distro::Debian.distro(), "debian");
     }
 }

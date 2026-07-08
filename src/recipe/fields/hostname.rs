@@ -29,8 +29,8 @@ impl RecipeField for HostnameField {
 impl Build for HostnameField {
     fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
         let distro = builder.distro();
-        if let Some(instruction) = self.value()?.and_then(|h| distro.set_hostname(&h)) {
-            builder.push(instruction);
+        if let Some(hostname) = self.value()? {
+            distro.set_hostname(builder, &hostname);
         }
         Ok(())
     }

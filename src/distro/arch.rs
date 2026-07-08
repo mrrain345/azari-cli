@@ -1,3 +1,4 @@
+use crate::builder::Builder;
 use crate::distro::{DistroOps, UserConfig, common};
 
 pub struct Arch;
@@ -11,24 +12,24 @@ impl DistroOps for Arch {
         "ghcr.io/bootcrew/arch-bootc:latest"
     }
 
-    fn set_hostname(&self, hostname: &str) -> Option<String> {
-        Some(common::set_hostname(hostname))
+    fn set_hostname(&self, builder: &mut Builder, hostname: &str) {
+        common::set_hostname(builder, hostname);
     }
 
-    fn install_packages(&self, packages: &[&str]) -> Option<String> {
+    fn install_packages(&self, builder: &mut Builder, packages: &[&str]) {
         if packages.is_empty() {
-            return None;
+            return;
         }
 
-        Some(format!(
+        builder.push(format!(
             "RUN --mount=type=tmpfs,dst=/tmp \
             --mount=type=cache,dst=/usr/lib/sysimage/cache/pacman \
             pacman -Syu --noconfirm {}",
             packages.join(" ")
-        ))
+        ));
     }
 
-    fn add_user(&self, config: &UserConfig) -> Vec<String> {
-        common::add_user(config)
+    fn add_user(&self, builder: &mut Builder, config: &UserConfig) {
+        common::add_user(builder, config);
     }
 }
