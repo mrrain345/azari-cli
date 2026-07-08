@@ -1,6 +1,7 @@
 use tempfile::TempDir;
 
 use crate::builder::error::BuildError;
+use crate::builder::stage::BuilderStage;
 use crate::builder::utils::{get_timestamp_str, make_build_dir};
 use crate::distro::Distro;
 use crate::recipe::Recipe;
@@ -16,10 +17,10 @@ pub struct Builder {
     distro: Option<Distro>,
     image: Option<String>,
     version: Option<String>,
-    name: Option<String>,
+    pretty_name: Option<String>,
     base_image: Option<String>,
     created: String,
-    lines: Vec<String>,
+    stages: Vec<BuilderStage>,
     build_dir: TempDir,
 }
 
@@ -35,21 +36,21 @@ pub struct BuilderOptions {
 const CHUNKAH_MAX_LAYERS: usize = 128;
 
 impl Builder {
-    /// Builds containerfile lines from a recipe.
+    /// Builds containerfile from a recipe.
     pub fn from_recipe(recipe: Recipe) -> Result<Self, BuildError> {
         Self::from_recipe_with(recipe, BuilderOptions::default())
     }
 
-    /// Builds containerfile lines from a recipe with additional options.
+    /// Builds containerfile from a recipe with additional options.
     pub fn from_recipe_with(recipe: Recipe, options: BuilderOptions) -> Result<Self, BuildError> {
         let mut builder = Builder {
             distro: None,
             image: options.image,
             version: options.version,
-            name: None,
+            pretty_name: None,
             base_image: None,
             created: get_timestamp_str(),
-            lines: Vec::new(),
+            stages: vec![BuilderStage::default()],
             build_dir: make_build_dir(options.build_dir)?,
         };
 
@@ -70,8 +71,8 @@ impl Builder {
     }
 
     /// Stores the image pretty name for use in OCI annotations.
-    pub(crate) fn set_name(&mut self, name: String) {
-        self.name = Some(name);
+    pub(crate) fn set_pretty_name(&mut self, name: String) {
+        self.pretty_name = Some(name);
     }
 
     /// Stores the resolved base image reference (the FROM image).
@@ -90,8 +91,8 @@ impl Builder {
     }
 
     /// Returns the pretty name.
-    pub fn name(&self) -> Option<&str> {
-        self.name.as_deref()
+    pub fn pretty_name(&self) -> Option<&str> {
+        self.pretty_name.as_deref()
     }
 
     /// Returns the resolved base image reference.
@@ -122,7 +123,7 @@ impl Builder {
             pairs.push(("org.opencontainers.image.ref.name", image.to_owned()));
         }
 
-        if let Some(name) = &self.name {
+        if let Some(name) = &self.pretty_name {
             pairs.push(("org.opencontainers.image.title", name.clone()));
         }
 
@@ -140,9 +141,41 @@ impl Builder {
         self.distro.ok_or(BuildError::DistroNotSpecified)
     }
 
+    /// Returns the mutable reference to the current (last) stage.
+    fn current_stage_mut(&mut self) -> &mut BuilderStage {
+        self.stages.last_mut().expect("stages is never empty")
+    }
+
+    /// Returns the auto-generated name for stage at `index` (1-based: "stage_1", "stage_2", …).
+    fn stage_name(index: usize) -> String {
+        format!("stage_{}", index + 1)
+    }
+
+    /// Appends a new stage with the given `from` image reference.
+    pub(crate) fn add_stage(&mut self, from: String) {
+        let mut stage = BuilderStage::default();
+        stage.set_from(from);
+        self.stages.push(stage);
+    }
+
+    /// Sets the FROM image reference on the current stage.
+    pub(crate) fn set_stage_from(&mut self, from: String) {
+        self.current_stage_mut().set_from(from);
+    }
+
     /// Appends a single Containerfile instruction line.
     pub(crate) fn push(&mut self, line: impl Into<String>) {
-        self.lines.push(line.into());
+        self.current_stage_mut().push(line);
+    }
+
+    /// Appends an early Containerfile instruction line.
+    pub(crate) fn push_early(&mut self, line: impl Into<String>) {
+        self.current_stage_mut().push_early(line);
+    }
+
+    /// Appends a late Containerfile instruction line.
+    pub(crate) fn push_late(&mut self, line: impl Into<String>) {
+        self.current_stage_mut().push_late(line);
     }
 
     /// Returns the path to the build directory.
@@ -150,15 +183,15 @@ impl Builder {
         self.build_dir.path()
     }
 
-    /// Renders all instruction lines into a single Containerfile string.
+    /// Renders all stages into a single Containerfile string.
     pub fn to_containerfile(&self) -> String {
-        if self.lines.is_empty() {
-            return String::new();
-        }
-
-        let mut out = self.lines.join("\n");
-        out.push('\n');
-        out
+        self.stages
+            .iter()
+            .enumerate()
+            .map(|(i, stage)| stage.to_containerfile(&Self::stage_name(i)))
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     /// Writes the Containerfile to `<build_dir>/Containerfile` and returns
@@ -174,16 +207,15 @@ impl Builder {
         self.push("RUN bootc container lint --no-truncate");
 
         if rechunk {
-            self.push("");
-            self.push("FROM quay.io/coreos/chunkah AS chunkah");
+            let builder_stage_name = Self::stage_name(self.stages.len() - 1);
+            self.add_stage("quay.io/coreos/chunkah".into());
             self.push(format!(
                 "RUN {} \\\n  {} \\\n  {}",
                 "--mount=type=bind,target=/usr/lib/azari/chunkah,rw",
-                "--mount=from=builder,target=/chunkah,ro",
+                format_args!("--mount=from={builder_stage_name},target=/chunkah,ro"),
                 format_args!("chunkah build --max-layers {CHUNKAH_MAX_LAYERS} --output oci:/usr/lib/azari/chunkah/out")
             ));
-            self.push("");
-            self.push("FROM oci:chunkah/out");
+            self.add_stage("oci:chunkah/out".into());
         }
 
         let mut labels = self

@@ -2,7 +2,9 @@
 mod builder;
 pub(crate) mod command;
 mod error;
+pub mod stage;
 pub(crate) mod utils;
 
 pub use builder::{Build, Builder, BuilderOptions};
 pub use error::BuildError;
+pub use stage::BuilderStage;

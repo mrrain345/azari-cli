@@ -2,9 +2,9 @@ use merge::Merge;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::builder::BuildError;
 use crate::builder::{Build, Builder};
 use crate::recipe::error::RecipeError;
-use crate::builder::BuildError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::unique::RecipeUnique;
 
@@ -45,7 +45,7 @@ impl Build for NameField {
 
             cmd.push(os_release_sed("PRETTY_NAME", &pretty));
             builder.push(format!("RUN {}", cmd.join(" && ")));
-            builder.set_name(pretty);
+            builder.set_pretty_name(pretty);
         }
         Ok(())
     }

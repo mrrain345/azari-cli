@@ -34,7 +34,7 @@ impl Build for FromField {
             .value()?
             .unwrap_or_else(|| distro.default_image().to_owned());
         builder.set_base_image(image.clone());
-        builder.push(format!("FROM {image} as builder"));
+        builder.set_stage_from(image);
         Ok(())
     }
 }
