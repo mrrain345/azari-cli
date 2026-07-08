@@ -2,9 +2,9 @@ use merge::Merge;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::builder::BuildError;
 use crate::builder::{Build, Builder};
 use crate::recipe::error::RecipeError;
-use crate::builder::BuildError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::unique::RecipeUnique;
 
@@ -28,7 +28,7 @@ impl RecipeField for HostnameField {
 
 impl Build for HostnameField {
     fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
-        let distro = builder.distro()?;
+        let distro = builder.distro();
         if let Some(instruction) = self.value()?.and_then(|h| distro.set_hostname(&h)) {
             builder.push(instruction);
         }

@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 use crate::builder::BuildError;
 use crate::builder::{Build, Builder};
+use crate::distro::Distro;
 use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::unique::RecipeUnique;
@@ -14,7 +15,7 @@ use crate::recipe::unique::RecipeUnique;
 /// This selects distro-specific defaults such as package manager behavior.
 ///
 /// Possible values: `arch`, `debian`, `fedora`, `ubuntu`.
-#[derive(Debug, Default, Deserialize, Merge, JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, Merge, JsonSchema)]
 #[serde(transparent)]
 pub struct DistroField(RecipeUnique<String>);
 
@@ -30,10 +31,18 @@ impl RecipeField for DistroField {
     }
 }
 
+impl DistroField {
+    /// Returns the distro as a `Distro` enum.
+    pub fn distro(&self) -> Result<Distro, BuildError> {
+        self.clone()
+            .value()?
+            .ok_or(BuildError::DistroNotSpecified)?
+            .parse()
+    }
+}
+
 impl Build for DistroField {
-    fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
-        let distro_str = self.value()?.ok_or(BuildError::DistroNotSpecified)?;
-        builder.set_distro(distro_str.parse()?);
+    fn build(self, _builder: &mut Builder) -> Result<(), BuildError> {
         Ok(())
     }
 }

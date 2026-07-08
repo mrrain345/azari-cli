@@ -2,9 +2,9 @@ use merge::Merge;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::builder::BuildError;
 use crate::builder::{Build, Builder};
 use crate::recipe::error::RecipeError;
-use crate::builder::BuildError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::list::RecipeList;
 
@@ -33,7 +33,7 @@ impl RecipeField for PackagesField {
 
 impl Build for PackagesField {
     fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
-        let distro = builder.distro()?;
+        let distro = builder.distro();
         let packages = self.value()?;
         if !packages.is_empty() {
             let refs: Vec<&str> = packages.iter().map(String::as_str).collect();

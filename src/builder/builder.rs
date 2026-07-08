@@ -15,7 +15,7 @@ const CHUNKAH_MAX_LAYERS: usize = 128;
 #[derive(Debug)]
 pub struct Builder {
     /// Base distro for the recipe.
-    distro: Option<Distro>,
+    distro: Distro,
     /// Metadata for the output image.
     meta: ImageMetadata,
     /// Stages of the Containerfile.
@@ -44,7 +44,7 @@ impl Builder {
     /// Builds containerfile from a recipe with additional options.
     pub fn from_recipe_with(recipe: Recipe, options: BuilderOptions) -> Result<Self, BuildError> {
         let mut builder = Builder {
-            distro: None,
+            distro: recipe.distro.distro()?,
             meta: ImageMetadata::default(),
             stages: vec![BuilderStage::default()],
             build_dir: make_build_dir(options.build_dir)?,
@@ -63,13 +63,6 @@ impl Builder {
         }
 
         Ok(builder)
-    }
-
-    /// Stores the resolved distro.
-    ///
-    /// Must be called before [`Builder::distro`].
-    pub fn set_distro(&mut self, distro: Distro) {
-        self.distro = Some(distro);
     }
 
     /// Returns a reference to the image metadata.
@@ -100,8 +93,8 @@ impl Builder {
     /// Returns the resolved distro.
     ///
     /// [`Builder::set_distro`] must have been called beforehand.
-    pub fn distro(&self) -> Result<Distro, BuildError> {
-        self.distro.ok_or(BuildError::DistroNotSpecified)
+    pub fn distro(&self) -> Distro {
+        self.distro
     }
 
     /// Appends a new stage with the given `from` image reference.

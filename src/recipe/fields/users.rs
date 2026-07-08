@@ -2,8 +2,8 @@ use merge::Merge;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use crate::builder::{Build, Builder};
 use crate::builder::BuildError;
+use crate::builder::{Build, Builder};
 use crate::distro::UserConfig;
 use crate::recipe::error::RecipeError;
 use crate::recipe::field::{RecipeField, rename_field_error};
@@ -79,7 +79,7 @@ impl Build for UsersField {
             return Ok(());
         }
 
-        let distro = builder.distro()?;
+        let distro = builder.distro();
 
         for (username, entry) in &users {
             let config = UserConfig {

@@ -29,8 +29,6 @@ pub struct Recipe {
 
 impl Build for Recipe {
     fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
-        // `distro` must be built first — it populates `builder.distro`,
-        // which other fields read from during their build step.
         self.distro.build(builder)?;
         self.image.build(builder)?;
         self.from.build(builder)?;
