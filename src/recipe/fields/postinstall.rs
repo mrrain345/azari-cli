@@ -2,9 +2,9 @@ use merge::Merge;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+use crate::builder::BuildError;
 use crate::builder::{Build, Builder};
 use crate::recipe::error::RecipeError;
-use crate::builder::BuildError;
 use crate::recipe::field::{RecipeField, rename_field_error};
 use crate::recipe::list::RecipeList;
 
@@ -31,7 +31,7 @@ impl RecipeField for PostinstallField {
 impl Build for PostinstallField {
     fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
         for command in self.value()? {
-            builder.push(format!("RUN {command}"));
+            builder.current_mut().push_late(format!("RUN {command}"));
         }
         Ok(())
     }

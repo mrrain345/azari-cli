@@ -1,5 +1,5 @@
-use crate::ini::IniExtra;
 use crate::builder::BuildError;
+use crate::ini::IniExtra;
 use crate::recipe::fields::files::target_to_filename;
 use crate::{builder::Builder, ini::IniMulti};
 use schemars::JsonSchema;
@@ -80,9 +80,13 @@ fn unit_dir(is_user: bool) -> &'static str {
 /// Enables a systemd unit by adding the appropriate `systemctl enable` command to the builder.
 fn enable_unit(builder: &mut Builder, unit_name: &str, is_user: bool) {
     if is_user {
-        builder.push(format!("RUN systemctl --global enable {unit_name}"));
+        builder
+            .current_mut()
+            .push_late(format!("RUN systemctl --global enable {unit_name}"));
     } else {
-        builder.push(format!("RUN systemctl enable {unit_name}"));
+        builder
+            .current_mut()
+            .push_late(format!("RUN systemctl enable {unit_name}"));
     }
 }
 
