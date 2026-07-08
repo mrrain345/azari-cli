@@ -31,9 +31,6 @@ pub fn add_user(builder: &mut Builder, config: &UserConfig) {
     if let Some(password) = &config.password {
         args.extend(["-p".into(), shell_quote(password)]);
     }
-    if !config.groups.is_empty() {
-        args.extend(["-G".into(), config.groups.join(",")]);
-    }
     args.push(shell_quote(&config.username));
 
     builder.push(format!("RUN {}", args.join(" ")));
@@ -41,6 +38,14 @@ pub fn add_user(builder: &mut Builder, config: &UserConfig) {
     if config.password.is_none() {
         // Remove the locked/disabled state so the account can be used without a password.
         builder.push(format!("RUN passwd -d {}", shell_quote(&config.username)));
+    }
+
+    if !config.groups.is_empty() {
+        builder.current_mut().push_late(format!(
+            "RUN usermod -aG {} {}",
+            config.groups.join(","),
+            shell_quote(&config.username)
+        ));
     }
 }
 
