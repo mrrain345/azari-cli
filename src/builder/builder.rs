@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use tempfile::TempDir;
 
 use crate::builder::Build;
@@ -15,7 +17,7 @@ const CHUNKAH_MAX_LAYERS: usize = 128;
 #[derive(Debug)]
 pub struct Builder {
     /// Base distro for the recipe.
-    distro: Distro,
+    distro: Option<Distro>,
     /// Metadata for the output image.
     meta: ImageMetadata,
     /// Stages of the Containerfile.
@@ -37,7 +39,7 @@ pub struct BuilderOptions {
 
 impl Builder {
     /// Creates a new empty builder with the given distro.
-    pub fn empty(distro: Distro) -> Result<Self, BuildError> {
+    pub fn empty(distro: Option<Distro>) -> Result<Self, BuildError> {
         let builder = Builder {
             distro,
             meta: ImageMetadata::default(),
@@ -56,7 +58,7 @@ impl Builder {
     /// Builds containerfile from a recipe with additional options.
     pub fn from_recipe_with(recipe: Recipe, options: BuilderOptions) -> Result<Self, BuildError> {
         let mut builder = Builder {
-            distro: recipe.distro.distro()?,
+            distro: None,
             meta: ImageMetadata::default(),
             stages: vec![BuilderStage::default()],
             build_dir: make_build_dir(options.build_dir)?,
@@ -75,6 +77,26 @@ impl Builder {
         }
 
         Ok(builder)
+    }
+
+    /// Builds the config at `path` as preceding stages, prepends them before the
+    /// current stage, and returns the name of the last preceding stage (to be used
+    /// as the `FROM` reference for the current stage).
+    ///
+    /// The sub-recipe is built directly into this builder by temporarily swapping
+    /// out the current stages.
+    pub(crate) fn build_stage_from_config(&mut self, path: &Path) -> Result<String, BuildError> {
+        let sub_recipe = Recipe::from_file(path)?;
+
+        // Swap out current stages so the sub-recipe builds into a fresh stage list,
+        // then append the saved stages afterwards.
+        // TODO: Requires refactoring to avoid this hack
+        let saved_stages = std::mem::replace(&mut self.stages, vec![BuilderStage::default()]);
+        sub_recipe.build(self)?;
+        let n_sub = self.stages.len();
+        self.stages.extend(saved_stages);
+
+        Ok(stage_name(n_sub - 1))
     }
 
     /// Returns a reference to the image metadata.
@@ -98,10 +120,21 @@ impl Builder {
     }
 
     /// Returns the resolved distro.
+    pub fn distro(&self) -> Result<Distro, BuildError> {
+        self.distro.ok_or(BuildError::DistroNotSpecified)
+    }
+
+    /// Sets the distro.
     ///
-    /// [`Builder::set_distro`] must have been called beforehand.
-    pub fn distro(&self) -> Distro {
-        self.distro
+    /// Returns an error if the distro is already set and the new value conflicts with it.
+    pub fn set_distro(&mut self, distro: Distro) -> Result<(), BuildError> {
+        match self.distro {
+            Some(current) if current != distro => Err(BuildError::DistroConflict),
+            _ => {
+                self.distro = Some(distro);
+                Ok(())
+            }
+        }
     }
 
     /// Appends a new stage with the given `from` image reference.

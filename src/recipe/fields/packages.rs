@@ -33,10 +33,11 @@ impl RecipeField for PackagesField {
 
 impl Build for PackagesField {
     fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
-        let distro = builder.distro();
         let packages = self.value()?;
+
         if !packages.is_empty() {
             let refs: Vec<&str> = packages.iter().map(String::as_str).collect();
+            let distro = builder.distro()?;
             distro.install_packages(builder, &refs);
         }
         Ok(())

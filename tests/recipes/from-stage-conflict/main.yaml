@@ -1,0 +1,2 @@
+distro: fedora
+from: ./base.yaml

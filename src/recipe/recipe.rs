@@ -30,8 +30,8 @@ pub struct Recipe {
 impl Build for Recipe {
     fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
         self.distro.build(builder)?;
-        self.image.build(builder)?;
         self.from.build(builder)?;
+        self.image.build(builder)?;
         self.name.build(builder)?;
         self.hostname.build(builder)?;
         self.users.build(builder)?;
@@ -50,8 +50,8 @@ impl Recipe {
         let errors: Vec<RecipeError> = vec![
             self.import.error(),
             self.distro.error(),
-            self.image.error(),
             self.from.error(),
+            self.image.error(),
             self.name.error(),
             self.hostname.error(),
             self.users.error(),

@@ -12,7 +12,7 @@ mod users;
 
 pub use distro::DistroField;
 pub use files::{FileSource, FilesField};
-pub use from::FromField;
+pub use from::{FromField, FromValue};
 pub use hostname::HostnameField;
 pub use image::ImageField;
 pub use import::ImportField;

@@ -80,8 +80,6 @@ mod tests {
     use super::Distro;
     use std::str::FromStr;
 
-    const VARIANTS: &[Distro] = &[Distro::Arch, Distro::Fedora, Distro::Ubuntu, Distro::Debian];
-
     #[test]
     fn parses_supported_distros() {
         assert_eq!("arch".parse::<Distro>().unwrap(), Distro::Arch);

@@ -61,11 +61,21 @@ image: ghcr.io/username/my-system
 
 ## `from`
 
-Override the default base image for the selected distro. If omitted, the distro's default base image is used. It must be a valid bootc image for the selected distro.
+Set the base image for the current stage. Accepts either a container image reference or a path to another config file.
+
+**Image reference** — overrides the distro's default base image. The image must be a valid bootc image for the selected distro. If omitted, the distro's default base image is used.
 
 ```yaml
 from: ghcr.io/bootcrew/arch-bootc:latest
 ```
+
+**Config file path** — enables multi-stage builds. The referenced config is built as a preceding stage and the current config starts from its output.
+
+```yaml
+from: ./base.yaml
+```
+
+The `distro` field must be consistent across all stages in a multi-stage build: it may be defined in at most one config (or set to the same value in all of them).
 
 ---
 

@@ -8,18 +8,29 @@ pub struct BuilderStage {
 }
 
 impl BuilderStage {
+    /// Returns the `FROM` image reference for this stage, if any.
+    pub fn from(&self) -> Option<&str> {
+        self.from.as_deref()
+    }
+
+    /// Sets the `FROM` image reference for this stage.
     pub fn set_from(&mut self, from: String) {
         self.from = Some(from);
     }
 
+    /// Appends a single Containerfile instruction line to this stage.
     pub fn push(&mut self, line: impl Into<String>) {
         self.instr.push(line.into());
     }
 
+    /// Appends a single Containerfile instruction line to this stage,
+    /// to be rendered before the main instructions.
     pub fn push_early(&mut self, line: impl Into<String>) {
         self.early_instr.push(line.into());
     }
 
+    /// Appends a single Containerfile instruction line to this stage,
+    /// to be rendered after the main instructions.
     pub fn push_late(&mut self, line: impl Into<String>) {
         self.late_instr.push(line.into());
     }

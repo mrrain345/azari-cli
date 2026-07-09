@@ -21,6 +21,9 @@ pub enum BuildError {
     )]
     ImageNotSpecified,
 
+    #[error("Not all stages have the same distro.")]
+    DistroConflict,
+
     #[error("Target file {} already exists. Use --wipe to overwrite.", pathname(.0))]
     FileExistsWithoutWipe(PathBuf),
 

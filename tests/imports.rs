@@ -49,8 +49,8 @@ fn circular_imports_do_not_recurse_forever() {
     let recipe = Recipe::from_file(&path).unwrap();
 
     assert_eq!(
-        recipe.from.value().unwrap().as_deref(),
-        Some("cycle-a-image")
+        recipe.from.value().unwrap(),
+        Some(azari::recipe::fields::FromValue::Image("cycle-a-image".to_string()))
     );
     assert_eq!(recipe.name.value().unwrap().as_deref(), Some("Cycle A"));
 

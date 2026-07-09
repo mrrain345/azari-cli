@@ -79,7 +79,7 @@ impl Build for UsersField {
             return Ok(());
         }
 
-        let distro = builder.distro();
+        let distro = builder.distro()?;
 
         for (username, entry) in users {
             let config = UserConfig {

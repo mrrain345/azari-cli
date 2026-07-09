@@ -42,7 +42,12 @@ impl DistroField {
 }
 
 impl Build for DistroField {
-    fn build(self, _builder: &mut Builder) -> Result<(), BuildError> {
+    fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
+        if let Some(distro) = self.value().ok().flatten() {
+            let distro = distro.parse::<Distro>()?;
+            builder.set_distro(distro)?
+        }
+
         Ok(())
     }
 }

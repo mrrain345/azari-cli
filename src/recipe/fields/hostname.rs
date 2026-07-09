@@ -28,10 +28,10 @@ impl RecipeField for HostnameField {
 
 impl Build for HostnameField {
     fn build(self, builder: &mut Builder) -> Result<(), BuildError> {
-        let distro = builder.distro();
         if let Some(hostname) = self.value()? {
-            distro.set_hostname(builder, &hostname);
+            builder.distro()?.set_hostname(builder, &hostname);
         }
+
         Ok(())
     }
 }

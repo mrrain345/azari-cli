@@ -1,0 +1,2 @@
+distro: arch
+from: arch-bootc:latest
